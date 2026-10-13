@@ -5,15 +5,15 @@
    Os componentes usam esses NOMES (o significado), nunca a cor direta: trocar a paleta
    do site inteiro é editar só este bloco. */
 @theme inline {
-  --color-fundo: #000000;
-  --color-painel: #111111;
-  --color-painel-claro: #1c1c1c;
-  --color-borda: #262626;
+  --color-fundo: #1c1c1e; /* cinza-grafite (mais claro que preto puro, a pedido) */
+  --color-painel: #262628;
+  --color-painel-claro: #313134;
+  --color-borda: #3d3d41;
   --color-texto: #ffffff;
-  --color-texto-fraco: #8f8f8f;
+  --color-texto-fraco: #a3a3a8;
   --color-destaque: #e6ff2e; /* amarelo-limão: marca, vitória, valores acima da média */
   --color-destaque-claro: #f2ff8a;
-  --color-neutro: #333333; /* derrota, valores abaixo da média, poucos dados */
+  --color-neutro: #4d4d52; /* derrota, valores abaixo da média, poucos dados */
   --color-erro: #ff6b6b; /* só para mensagens de erro do site, nunca para "derrota" */
 
   --font-sans: var(--font-bricolage);
