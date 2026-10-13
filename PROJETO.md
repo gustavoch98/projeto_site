@@ -253,5 +253,11 @@ Cada fase só começa depois que a anterior estiver funcionando e eu confirmar.
 | 2026-10-13 | **Autocomplete** na busca (adicionado ao MVP a pedido): `GET /api/players/search` busca por prefixo do nome **no nosso banco**, com índice `lower(game_name) text_pattern_ops` | A API da Riot não tem busca por prefixo; como no OP.GG, as sugestões vêm dos jogadores que o site já conhece. A base cresce com as buscas e, na Fase 4, com as partidas |
 | 2026-10-13 | A `#TAG` é opcional na busca: sem ela, tentamos `#BR1` | Simplifica o uso; a página de "não encontrado" explica a tentativa |
 | 2026-10-13 | Front acessa o autocomplete por um **Route Handler** do Next (`/api/sugestoes`), que repassa ao FastAPI | Mantém a regra de que o navegador não chama o back-end diretamente |
-| Pendente | Script de "semente" com jogadores do topo do ranking BR (Mestre+) para popular o autocomplete | Deixado para depois do deploy (mais rápido com a chave de produção) |
+| 2026-10-13 | Script de "semente" (`scripts/semear_ranking.py`) com os ~10,6 mil jogadores Mestre+ do BR | Popula o autocomplete; retomável e com ritmo configurável para não esgotar a chave |
+| 2026-10-13 | **Fase 4 antecipada** antes do deploy: o perfil ganha partidas e análises | Sem histórico de partidas não há insights; o site estava cru para o portfólio |
+| 2026-10-13 | Estrutura de páginas: **uma página por jogador** (`/perfil/br/Nome-TAG`) com seções/abas; "Meu perfil" será um atalho salvo no navegador, sem login | Sem recursos pessoais (metas, alertas) duas páginas mostrariam os mesmos dados; login fica para quando houver |
+| 2026-10-13 | Partidas: `matches` (JSON bruto em JSONB) + `match_participants` (colunas de análise, com início/duração/fila desnormalizados); endpoint próprio `.../matches` carregado com `<Suspense>` | O elo aparece na hora e as partidas chegam por streaming; cada partida é buscada na Riot uma única vez |
+| 2026-10-13 | `ranked_history`: "foto" do elo a cada mudança | Permite gráfico de evolução do PDL; só existe a partir de quando começamos a gravar |
+| 2026-10-13 | Prioridade de análises exclusivas: **horário e tilt** | Escolha do Gustavo. Atenção: horários vêm em UTC; converter para America/Sao_Paulo nas análises |
+| 2026-10-13 | Espaço: ~50 KB por partida no banco (JSON comprimido) | O plano grátis do Neon tem 0,5 GB; reavaliar guardar o JSON bruto no deploy |
 

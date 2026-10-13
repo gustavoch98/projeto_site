@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 
 import BotaoAtualizar from "@/components/BotaoAtualizar";
 import CardRanked from "@/components/CardRanked";
+import SecaoPartidas, { EsqueletoPartidas } from "@/components/partidas/SecaoPartidas";
 import TempoRelativo from "@/components/TempoRelativo";
 import { buscarPerfil } from "@/lib/api";
 import { urlIconePerfil, versaoAtual } from "@/lib/ddragon";
@@ -86,6 +88,14 @@ export default async function PaginaPerfil({ params }: Props) {
         <CardRanked titulo="Ranqueada Solo/Duo" fila={perfil.solo} />
         <CardRanked titulo="Ranqueada Flex" fila={perfil.flex} />
       </div>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-lg font-semibold">Partidas recentes</h2>
+        {/* O elo acima aparece na hora; as partidas chegam depois (streaming) */}
+        <Suspense fallback={<EsqueletoPartidas />}>
+          <SecaoPartidas regiao={regiao} nome={id.nome} tag={id.tag} />
+        </Suspense>
+      </section>
     </div>
   );
 }

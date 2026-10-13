@@ -88,3 +88,43 @@ export async function sugerirJogadores(texto: string, regiao = "br"): Promise<Su
     return []; // autocomplete é um extra: se falhar, simplesmente não mostra sugestões
   }
 }
+
+// --- Partidas ----------------------------------------------------------------
+
+// Espelha o schema MatchSummary do back-end (backend/app/schemas/match.py)
+export type Partida = {
+  match_id: string;
+  queue_id: number;
+  game_start: string;
+  game_duration: number;
+  remake: boolean;
+  champion_id: number;
+  champion_name: string;
+  team_position: string;
+  win: boolean;
+  kills: number;
+  deaths: number;
+  assists: number;
+  cs: number;
+  gold: number;
+  damage_to_champions: number;
+  vision_score: number;
+  kill_participation: number | null;
+  items: number[];
+  summoner_spells: number[];
+  kda: number;
+  cs_per_minute: number;
+};
+
+export async function buscarPartidas(
+  regiao: string,
+  nome: string,
+  tag: string,
+): Promise<Partida[] | null> {
+  try {
+    const resposta = await fetch(`${urlPerfil(regiao, nome, tag)}/matches`);
+    return resposta.ok ? await resposta.json() : null;
+  } catch {
+    return null; // null = não foi possível carregar (a página mostra um aviso)
+  }
+}
