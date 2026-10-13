@@ -38,6 +38,13 @@ uvicorn app.main:app --reload
 pytest
 ```
 
+```bash
+# 7. Front-end (em outro terminal, na pasta frontend)
+cp .env.example .env.local
+npm install
+npm run dev                   # http://localhost:3000
+```
+
 Para testar só a chave da Riot: `python scripts/testar_chave.py "Nome#TAG"`.
 
 ## API própria

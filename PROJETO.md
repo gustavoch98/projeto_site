@@ -246,4 +246,8 @@ Cada fase só começa depois que a anterior estiver funcionando e eu confirmar.
 | 2026-10-13 | Se a Riot falhar (5xx, 429, chave expirada) e houver dados antigos no banco, eles são devolvidos com `cached: true` | Melhor experiência do que uma tela de erro |
 | 2026-10-13 | Resposta do perfil traz `solo` e `flex` separados (`null` = Unranked) | Simplifica o front-end |
 | 2026-10-13 | Testes usam o banco `lolstats_test` no mesmo container e **respx** para simular a Riot | Não gasta limite da chave nem depende dela |
+| 2026-10-13 | Front-end em **Next.js 16** com `cacheComponents` (padrão do gerador): nada é cacheado sem `"use cache"` | Perfil sempre busca dados frescos da API (que tem o próprio cache); só a versão do Data Dragon é cacheada (horas) |
+| 2026-10-13 | Emblemas de elo vêm do **CommunityDragon** (`raw.communitydragon.org`) | O Data Dragon não tem emblemas de elo |
+| 2026-10-13 | Front chama a API **só pelo servidor do Next.js** (Server Components e Server Action do botão "Atualizar"); `API_URL` sem `NEXT_PUBLIC_` | O navegador não precisa conhecer o endereço do back-end, e não dependemos de CORS |
+| 2026-10-13 | URL do perfil usa o **último hífen** como separador (`/perfil/br/Nome-TAG`) | A TAG só tem letras e números, mas o nome pode ter hífen |
 

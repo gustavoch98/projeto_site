@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+/* Tema escuro fixo. As cores viram classes do Tailwind: bg-fundo, bg-painel, text-texto... */
+@theme inline {
+  --color-fundo: #0b0d12;
+  --color-painel: #151923;
+  --color-painel-claro: #1e2330;
+  --color-borda: #2a3040;
+  --color-texto: #e6e8ee;
+  --color-texto-fraco: #8b93a7;
+  --color-destaque: #3b82f6;
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-fundo);
+  color: var(--color-texto);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
