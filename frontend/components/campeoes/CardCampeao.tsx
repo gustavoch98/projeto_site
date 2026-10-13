@@ -8,7 +8,7 @@ import { corWinrate } from "@/lib/ranked";
 
 type Props = {
   campeao: EstatisticasCampeao;
-  geral: EstatisticasCampeao;
+  media: EstatisticasCampeao; // média do jogador na rota principal deste campeão
   minimo: number;
   nome: string;
   imagem: string | null;
@@ -16,14 +16,14 @@ type Props = {
 
 // Card de um dos campeões mais jogados. Abaixo do mínimo de partidas, os números aparecem
 // esmaecidos e uma barra mostra quanto falta para a análise completa.
-export default function CardCampeao({ campeao: c, geral, minimo, nome, imagem }: Props) {
+export default function CardCampeao({ campeao: c, media, minimo, nome, imagem }: Props) {
   const completo = c.jogos >= minimo;
 
   const metricas = [
-    { rotulo: "KDA", valor: decimal(c.kda, 2), comparacao: compararComMedia(c.kda, geral.kda, 2) },
-    { rotulo: "CS/min", valor: decimal(c.cs_por_minuto), comparacao: compararComMedia(c.cs_por_minuto, geral.cs_por_minuto) },
-    { rotulo: "Dano/min", valor: decimal(c.dano_por_minuto, 0), comparacao: compararComMedia(c.dano_por_minuto, geral.dano_por_minuto, 0) },
-    { rotulo: "Visão/min", valor: decimal(c.visao_por_minuto, 2), comparacao: compararComMedia(c.visao_por_minuto, geral.visao_por_minuto, 2) },
+    { rotulo: "KDA", valor: decimal(c.kda, 2), comparacao: compararComMedia(c.kda, media.kda, 2) },
+    { rotulo: "CS/min", valor: decimal(c.cs_por_minuto), comparacao: compararComMedia(c.cs_por_minuto, media.cs_por_minuto) },
+    { rotulo: "Dano/min", valor: decimal(c.dano_por_minuto, 0), comparacao: compararComMedia(c.dano_por_minuto, media.dano_por_minuto, 0) },
+    { rotulo: "Visão/min", valor: decimal(c.visao_por_minuto, 2), comparacao: compararComMedia(c.visao_por_minuto, media.visao_por_minuto, 2) },
   ];
 
   return (

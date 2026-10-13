@@ -8,8 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.insights import (
     CampeoesJogador,
     EstatisticasCampeao,
+    EvolucaoJogador,
     FaixaDesempenho,
+    FotoPdl,
     InsightsHorario,
+    PontoPartida,
 )
 
 # Os horários do banco estão em UTC; o jogador pensa no horário local.
@@ -153,6 +156,14 @@ WHERE {FILTRO_PARTIDAS}
 HAVING count(*) > 0
 """
 
+# Médias em cada rota. Partidas sem rota (team_position vazio) ficam de fora.
+CONSULTA_POR_ROTA = f"""
+SELECT NULL::int AS champion_id, NULL::text AS champion_name, {COLUNAS_ESTATISTICAS}
+FROM match_participants
+WHERE {FILTRO_PARTIDAS} AND team_position <> ''
+GROUP BY team_position
+"""
+
 
 def montar_estatisticas(linha) -> EstatisticasCampeao:
     minutos = linha.segundos / 60
@@ -187,14 +198,120 @@ async def calcular_campeoes(
     params = {"puuid": puuid}
     por_campeao = await session.execute(text(CONSULTA_POR_CAMPEAO), params)
     geral = await session.execute(text(CONSULTA_GERAL), params)
+    por_rota = await session.execute(text(CONSULTA_POR_ROTA), params)
 
     campeoes = [montar_estatisticas(linha) for linha in por_campeao]
     linha_geral = geral.first()
+    # Em cada grupo de rota, o mode() da rota é a própria rota: serve de chave
+    medias_por_rota = {m.rota_principal: m for m in map(montar_estatisticas, por_rota)}
     return CampeoesJogador(
         partidas_analisadas=sum(c.jogos for c in campeoes),
         minimo_partidas=MINIMO_PARTIDAS_CAMPEAO,
         geral=montar_estatisticas(linha_geral) if linha_geral else None,
+        medias_por_rota=medias_por_rota,
         campeoes=campeoes,
+        coletando_historico=coletando_historico,
+    )
+
+
+# --- Evolução ---------------------------------------------------------------------
+
+FILA_SOLO_ID = 420
+JANELA_WINRATE_MOVEL = 20
+MINIMO_WINRATE_MOVEL = 10  # antes disso a janela é pequena demais para significar algo
+
+# Window functions: o saldo é uma soma ACUMULADA (do início até a partida atual) e o winrate
+# móvel é a média de uma JANELA que anda junto (a partida atual + as 19 anteriores).
+CONSULTA_EVOLUCAO = f"""
+SELECT game_start AS data,
+       win AS vitoria,
+       sum(CASE WHEN win THEN 1 ELSE -1 END) OVER (ORDER BY game_start) AS saldo,
+       avg(win::int) OVER janela AS winrate_movel,
+       count(*) OVER janela AS tamanho_janela
+FROM match_participants
+WHERE puuid = :puuid AND NOT remake AND queue_id = :fila
+WINDOW janela AS (
+    ORDER BY game_start ROWS BETWEEN {JANELA_WINRATE_MOVEL - 1} PRECEDING AND CURRENT ROW
+)
+ORDER BY game_start
+"""
+
+CONSULTA_FOTOS = """
+SELECT recorded_at AS data, tier, rank, league_points AS pdl, wins AS vitorias, losses AS derrotas
+FROM ranked_history
+WHERE puuid = :puuid AND queue_type = 'RANKED_SOLO_5x5'
+ORDER BY recorded_at
+"""
+
+TIERS_COM_DIVISAO = ["IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "EMERALD", "DIAMOND"]
+DIVISOES = {"IV": 0, "III": 1, "II": 2, "I": 3}
+
+
+def pontos_do_elo(tier: str, rank: str, pdl: int) -> int:
+    """Converte o elo numa escala única, para desenhar o gráfico numa linha só.
+
+    Cada divisão vale 100 pontos (Ferro IV 0 PDL = 0, Ferro III = 100, ..., Diamante I = 2700).
+    De Mestre para cima não há divisões: tudo parte de 2800 e soma o PDL.
+    """
+    if tier in TIERS_COM_DIVISAO:
+        return (TIERS_COM_DIVISAO.index(tier) * 4 + DIVISOES.get(rank, 0)) * 100 + pdl
+    return len(TIERS_COM_DIVISAO) * 400 + pdl
+
+
+def sequencias(resultados: list[bool]) -> tuple[int, int, int]:
+    """(maior sequência de vitórias, maior de derrotas, sequência atual com sinal)."""
+    maior_v = maior_d = atual = 0
+    for vitoria in resultados:
+        if vitoria:
+            atual = atual + 1 if atual > 0 else 1
+            maior_v = max(maior_v, atual)
+        else:
+            atual = atual - 1 if atual < 0 else -1
+            maior_d = max(maior_d, -atual)
+    return maior_v, maior_d, atual
+
+
+async def calcular_evolucao(
+    session: AsyncSession, puuid: str, coletando_historico: bool
+) -> EvolucaoJogador:
+    params = {"puuid": puuid, "fila": FILA_SOLO_ID}
+    linhas = (await session.execute(text(CONSULTA_EVOLUCAO), params)).all()
+    fotos = (await session.execute(text(CONSULTA_FOTOS), {"puuid": puuid})).all()
+
+    resultados = [linha.vitoria for linha in linhas]
+    maior_v, maior_d, atual = sequencias(resultados)
+    return EvolucaoJogador(
+        fila="RANKED_SOLO_5x5",
+        partidas=[
+            PontoPartida(
+                data=linha.data,
+                vitoria=linha.vitoria,
+                saldo=linha.saldo,
+                winrate_movel=(
+                    float(linha.winrate_movel)
+                    if linha.tamanho_janela >= MINIMO_WINRATE_MOVEL
+                    else None
+                ),
+            )
+            for linha in linhas
+        ],
+        fotos=[
+            FotoPdl(
+                data=f.data,
+                tier=f.tier,
+                rank=f.rank,
+                pdl=f.pdl,
+                pontos=pontos_do_elo(f.tier, f.rank, f.pdl),
+                vitorias=f.vitorias,
+                derrotas=f.derrotas,
+            )
+            for f in fotos
+        ],
+        vitorias=sum(resultados),
+        derrotas=len(resultados) - sum(resultados),
+        maior_sequencia_vitorias=maior_v,
+        maior_sequencia_derrotas=maior_d,
+        sequencia_atual=atual,
         coletando_historico=coletando_historico,
     )
 

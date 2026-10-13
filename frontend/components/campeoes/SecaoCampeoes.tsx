@@ -1,9 +1,10 @@
 import Image from "next/image";
 
-import { buscarCampeoes } from "@/lib/api";
+import { buscarCampeoes, type EstatisticasCampeao } from "@/lib/api";
 import { decimal, maisForte, maisPertoDoMinimo } from "@/lib/campeoes";
 import { tabelaCampeoes, versaoAtual } from "@/lib/ddragon";
 import { porcentagem } from "@/lib/insights";
+import { ROTAS } from "@/lib/partidas";
 
 import CardCampeao from "./CardCampeao";
 import TabelaCampeoes from "./TabelaCampeoes";
@@ -34,6 +35,10 @@ export default async function SecaoCampeoes({ regiao, nome, tag }: Props) {
   const proximo = maisPertoDoMinimo(campeoes, minimo);
   const nomeDe = (id: number | null, reserva: string | null) => (id !== null ? tabela[id]?.nome : undefined) ?? reserva ?? "?";
   const imagemDe = (id: number | null) => (id !== null ? tabela[id]?.imagem ?? null : null);
+  // Cada campeão é comparado com a média do jogador NA ROTA PRINCIPAL dele
+  // (um suporte não é comparado com as partidas de atirador). Sem rota: média geral.
+  const mediaDe = (c: EstatisticasCampeao) =>
+    (c.rota_principal ? dados.medias_por_rota[c.rota_principal] : undefined) ?? geral;
 
   return (
     <div className="flex flex-col gap-6">
@@ -49,7 +54,9 @@ export default async function SecaoCampeoes({ regiao, nome, tag }: Props) {
               <p className="text-xl font-bold sm:text-2xl">{nomeDe(forte.champion_id, forte.champion_name)}</p>
               <p className="mt-1 text-sm text-texto-fraco">
                 <span className="text-texto">{porcentagem(forte.winrate)}</span> de vitórias em {forte.jogos} partidas · KDA{" "}
-                <span className="text-texto">{decimal(forte.kda, 2)}</span> (sua média: {decimal(geral.kda, 2)})
+                <span className="text-texto">{decimal(forte.kda, 2)}</span> (sua média
+                {forte.rota_principal ? ` como ${(ROTAS[forte.rota_principal] ?? forte.rota_principal).toLowerCase()}` : ""}:{" "}
+                {decimal(mediaDe(forte).kda, 2)})
               </p>
             </div>
           </>
@@ -74,7 +81,7 @@ export default async function SecaoCampeoes({ regiao, nome, tag }: Props) {
           <h2 className="text-lg font-semibold">Mais jogados</h2>
           <p className="text-xs text-texto-fraco">
             <span className="text-destaque">▲</span> / <span className="text-texto-fraco">▼</span> = acima / abaixo da sua média
-            geral ({decimal(geral.kda, 2)} KDA · {decimal(geral.cs_por_minuto)} CS/min)
+            na mesma rota
           </p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -82,7 +89,7 @@ export default async function SecaoCampeoes({ regiao, nome, tag }: Props) {
             <CardCampeao
               key={c.champion_id}
               campeao={c}
-              geral={geral}
+              media={mediaDe(c)}
               minimo={minimo}
               nome={nomeDe(c.champion_id, c.champion_name)}
               imagem={imagemDe(c.champion_id)}

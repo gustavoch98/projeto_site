@@ -193,6 +193,7 @@ export type CampeoesJogador = {
   partidas_analisadas: number;
   minimo_partidas: number;
   geral: EstatisticasCampeao | null;
+  medias_por_rota: Record<string, EstatisticasCampeao>;
   campeoes: EstatisticasCampeao[];
   coletando_historico: boolean;
 };
@@ -204,6 +205,46 @@ export async function buscarCampeoes(
 ): Promise<CampeoesJogador | null> {
   try {
     const resposta = await fetch(`${urlPerfil(regiao, nome, tag)}/champions`);
+    return resposta.ok ? await resposta.json() : null;
+  } catch {
+    return null;
+  }
+}
+
+// --- Evolução ----------------------------------------------------------------
+
+// Espelha EvolucaoJogador (backend/app/schemas/insights.py)
+export type PontoPartida = { data: string; vitoria: boolean; saldo: number; winrate_movel: number | null };
+
+export type FotoPdl = {
+  data: string;
+  tier: string;
+  rank: string;
+  pdl: number;
+  pontos: number;
+  vitorias: number;
+  derrotas: number;
+};
+
+export type EvolucaoJogador = {
+  fila: string;
+  partidas: PontoPartida[];
+  fotos: FotoPdl[];
+  vitorias: number;
+  derrotas: number;
+  maior_sequencia_vitorias: number;
+  maior_sequencia_derrotas: number;
+  sequencia_atual: number;
+  coletando_historico: boolean;
+};
+
+export async function buscarEvolucao(
+  regiao: string,
+  nome: string,
+  tag: string,
+): Promise<EvolucaoJogador | null> {
+  try {
+    const resposta = await fetch(`${urlPerfil(regiao, nome, tag)}/evolution`);
     return resposta.ok ? await resposta.json() : null;
   } catch {
     return null;

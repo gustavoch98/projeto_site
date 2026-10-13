@@ -6,10 +6,14 @@ from app.db import get_session
 from app.models import Account
 from app.riot.client import RiotClient
 from app.riot.routing import obter_roteamento
-from app.schemas.insights import CampeoesJogador, InsightsHorario
+from app.schemas.insights import CampeoesJogador, EvolucaoJogador, InsightsHorario
 from app.schemas.match import MatchSummary
 from app.schemas.player import PlayerProfile, PlayerSuggestion
-from app.services.insights import calcular_campeoes, calcular_insights_horario
+from app.services.insights import (
+    calcular_campeoes,
+    calcular_evolucao,
+    calcular_insights_horario,
+)
 from app.services.matches import (
     completar_historico,
     historico_em_andamento,
@@ -117,4 +121,19 @@ async def obter_campeoes(
     conta = await conta_para_consulta(session, riot, settings, region, game_name, tag_line)
     coletando = historico_em_andamento(conta.puuid) or precisa_completar_historico(conta, settings)
     return await calcular_campeoes(session, conta.puuid, coletando)
+
+
+@router.get("/{region}/{game_name}/{tag_line}/evolution", response_model=EvolucaoJogador)
+async def obter_evolucao(
+    region: str,
+    game_name: str,
+    tag_line: str,
+    session: AsyncSession = Depends(get_session),
+    riot: RiotClient = Depends(get_riot_client),
+    settings: Settings = Depends(get_settings),
+):
+    """Evolução na Solo/Duo: saldo de vitórias, winrate móvel, sequências e PDL registrado."""
+    conta = await conta_para_consulta(session, riot, settings, region, game_name, tag_line)
+    coletando = historico_em_andamento(conta.puuid) or precisa_completar_historico(conta, settings)
+    return await calcular_evolucao(session, conta.puuid, coletando)
 

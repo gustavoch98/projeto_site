@@ -53,5 +53,43 @@ class CampeoesJogador(BaseModel):
     partidas_analisadas: int
     minimo_partidas: int  # abaixo disso, o campeão aparece como "poucos dados"
     geral: EstatisticasCampeao | None  # todas as partidas juntas, para comparação
+    # Médias em cada rota (TOP, JUNGLE...): cada campeão é comparado com a da sua rota principal
+    medias_por_rota: dict[str, EstatisticasCampeao]
     campeoes: list[EstatisticasCampeao]  # do mais jogado para o menos jogado
+    coletando_historico: bool
+
+
+# --- Evolução ----------------------------------------------------------------------
+
+
+class PontoPartida(BaseModel):
+    """Uma partida na linha do tempo da evolução (da mais antiga para a mais recente)."""
+
+    data: datetime
+    vitoria: bool
+    saldo: int  # vitórias - derrotas acumuladas até esta partida
+    winrate_movel: float | None  # winrate das últimas 20 (None enquanto há menos de 10)
+
+
+class FotoPdl(BaseModel):
+    """O elo registrado num momento (tabela ranked_history)."""
+
+    data: datetime
+    tier: str
+    rank: str
+    pdl: int
+    pontos: int  # elo numa escala única (Ferro IV 0 PDL = 0) para desenhar o gráfico
+    vitorias: int
+    derrotas: int
+
+
+class EvolucaoJogador(BaseModel):
+    fila: str  # RANKED_SOLO_5x5
+    partidas: list[PontoPartida]
+    fotos: list[FotoPdl]
+    vitorias: int
+    derrotas: int
+    maior_sequencia_vitorias: int
+    maior_sequencia_derrotas: int
+    sequencia_atual: int  # positiva = vitórias seguidas; negativa = derrotas seguidas
     coletando_historico: bool
