@@ -233,3 +233,17 @@ Cada fase só começa depois que a anterior estiver funcionando e eu confirmar.
 - Commits pequenos e com mensagens descritivas.
 - Antes de usar qualquer endpoint da Riot, confira a documentação oficial em developer.riotgames.com, porque a API muda com frequência.
 - Mantenha este arquivo atualizado: quando uma decisão nova for tomada, registre aqui.
+
+---
+
+## 11. Registro de decisões
+
+| Data | Decisão | Motivo |
+|---|---|---|
+| 2026-10-13 | Driver do Postgres: **asyncpg** (URL `postgresql+asyncpg://`) | O modo assíncrono do psycopg não funciona com o event loop padrão do Windows |
+| 2026-10-13 | Rate limit por **janela deslizante** (20/1s e 100/120s), um limitador por host da Riot | Reproduz exatamente a regra da Riot, que conta os limites separadamente por host |
+| 2026-10-13 | "Atualizar" ignora o TTL do cache, mas respeita `REFRESH_COOLDOWN_SECONDS` (120s) | Evita que o botão seja usado para esgotar o limite da chave |
+| 2026-10-13 | Se a Riot falhar (5xx, 429, chave expirada) e houver dados antigos no banco, eles são devolvidos com `cached: true` | Melhor experiência do que uma tela de erro |
+| 2026-10-13 | Resposta do perfil traz `solo` e `flex` separados (`null` = Unranked) | Simplifica o front-end |
+| 2026-10-13 | Testes usam o banco `lolstats_test` no mesmo container e **respx** para simular a Riot | Não gasta limite da chave nem depende dela |
+

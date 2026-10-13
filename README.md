@@ -28,6 +28,22 @@ python -m venv .venv
 .venv\Scripts\activate        # Windows (Linux/macOS: source .venv/bin/activate)
 pip install -e ".[dev]"
 
-# 4. Testar a chave da Riot
-python scripts/testar_chave.py "Nome#TAG"
+# 4. Criar as tabelas no banco
+alembic upgrade head
+
+# 5. Subir a API (http://localhost:8000/docs para a documentação interativa)
+uvicorn app.main:app --reload
+
+# 6. Rodar os testes (a Riot é simulada; usa o banco lolstats_test)
+pytest
 ```
+
+Para testar só a chave da Riot: `python scripts/testar_chave.py "Nome#TAG"`.
+
+## API própria
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/api/players/{region}/{gameName}/{tagLine}` | Perfil (conta, nível, ranked Solo/Flex), com cache de 10 min |
+| POST | `/api/players/{region}/{gameName}/{tagLine}/refresh` | Força atualização (mínimo de 2 min entre atualizações) |
+| GET | `/health` | Status da API e do banco |
