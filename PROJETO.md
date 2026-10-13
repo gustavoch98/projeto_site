@@ -260,4 +260,7 @@ Cada fase só começa depois que a anterior estiver funcionando e eu confirmar.
 | 2026-10-13 | `ranked_history`: "foto" do elo a cada mudança | Permite gráfico de evolução do PDL; só existe a partir de quando começamos a gravar |
 | 2026-10-13 | Prioridade de análises exclusivas: **horário e tilt** | Escolha do Gustavo. Atenção: horários vêm em UTC; converter para America/Sao_Paulo nas análises |
 | 2026-10-13 | Espaço: ~50 KB por partida no banco (JSON comprimido) | O plano grátis do Neon tem 0,5 GB; reavaliar guardar o JSON bruto no deploy |
+| 2026-10-13 | Coleta para exploração: `scripts/coletar_partidas.py` (um jogador + amostra de 10 por elo, 100 partidas cada, sorteio com semente fixa salvo em `backend/dados/`, fora do Git) | Tilt e horário exigem sequências longas por jogador e jogadores de todos os elos |
+| 2026-10-13 | Notebooks com dependências opcionais `.[analise]` (JupyterLab, pandas, matplotlib, psycopg síncrono) | O pandas não lê com driver assíncrono; a API não precisa dessas bibliotecas |
+| 2026-10-13 | Definições da exploração 01: sessão = intervalo ≤ 45 min entre partidas; comparação entre jogadores pelo desvio do winrate do próprio jogador; IC 95% de Wilson | Evita misturar *quem* joga em cada horário com *como* joga; deixa a incerteza visível |
 

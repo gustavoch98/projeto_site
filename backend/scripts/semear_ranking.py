@@ -20,19 +20,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # permite "import app..."
 
 from sqlalchemy import select  # noqa: E402
-from sqlalchemy.exc import IntegrityError  # noqa: E402
 
 from app.config import get_settings  # noqa: E402
 from app.db import SessionLocal  # noqa: E402
 from app.models import Account  # noqa: E402
-from app.riot.client import (  # noqa: E402
-    RiotClient,
-    RiotIndisponivel,
-    RiotLimiteExcedido,
-    RiotNaoEncontrado,
-)
+from app.riot.client import RiotClient  # noqa: E402
 from app.riot.routing import REGIOES  # noqa: E402
-from app.services.players import FILA_SOLO, salvar_dados_riot  # noqa: E402
+from app.services.coleta import salvar_jogador_da_liga  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
 log = logging.getLogger("semente")
@@ -44,7 +38,6 @@ LIGAS = ["challenger", "grandmaster", "master"]
 # Ajustável com --por-2min (ex.: 90 quando nada mais estiver usando a chave).
 POR_2MIN_PADRAO = 60
 TRABALHADORES = 4  # jogadores processados em paralelo (o rate limiter segura o ritmo)
-TENTATIVAS_FALHA_REDE = 3
 
 
 async def carregar_ranking(riot: RiotClient) -> list[tuple[str, dict]]:
@@ -64,46 +57,10 @@ async def puuids_ja_salvos() -> set[str]:
         return set(await session.scalars(select(Account.puuid)))
 
 
-async def semear_jogador(riot: RiotClient, tier: str, entrada: dict) -> str:
-    """Busca nome e ícone de um jogador e salva. Devolve 'ok', 'sumiu', 'conflito' ou 'falhou'."""
-    rot = REGIOES[REGIAO]
-    puuid = entrada["puuid"]
-    falhas = 0
-    while True:
-        try:
-            conta, summoner = await asyncio.gather(
-                riot.conta_por_puuid(rot, puuid),
-                riot.summoner_por_puuid(rot, puuid),
-            )
-            break
-        except RiotLimiteExcedido as erro:
-            log.warning("429: esperando %ss", erro.retry_after)
-            await asyncio.sleep(erro.retry_after)
-        except RiotNaoEncontrado:
-            return "sumiu"
-        except RiotIndisponivel as erro:
-            # Falha de rede ou 5xx: num processo de horas, não pode derrubar tudo
-            falhas += 1
-            if falhas >= TENTATIVAS_FALHA_REDE:
-                log.warning("Pulando %s após %d falhas (%s)", puuid[:12], falhas, erro)
-                return "falhou"
-            await asyncio.sleep(5 * falhas)
-
-    ranked = [{**entrada, "queueType": FILA_SOLO, "tier": tier}]
-    async with SessionLocal() as session:
-        try:
-            await salvar_dados_riot(session, REGIAO, conta, summoner, ranked)
-            await session.commit()
-            return "ok"
-        except IntegrityError:
-            # Outro registro antigo do banco usa o mesmo Riot ID (alguém trocou de nome)
-            await session.rollback()
-            return "conflito"
-
-
 async def main(limite: int | None, por_2min: int) -> None:
     limites = [(18, 1.0), (por_2min, 120.0)]
     riot = RiotClient(get_settings().riot_api_key.get_secret_value(), limites=limites)
+    rot = REGIOES[REGIAO]
     try:
         ranking = await carregar_ranking(riot)
         salvos = await puuids_ja_salvos()
@@ -119,7 +76,7 @@ async def main(limite: int | None, por_2min: int) -> None:
         async def trabalhador():
             while not fila.empty():
                 tier, entrada = fila.get_nowait()
-                resultado = await semear_jogador(riot, tier, entrada)
+                resultado = await salvar_jogador_da_liga(riot, rot, REGIAO, tier, entrada)
                 contagem[resultado] += 1
                 feitos = sum(contagem.values())
                 if feitos % 50 == 0 or feitos == len(pendentes):

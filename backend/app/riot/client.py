@@ -118,12 +118,32 @@ class RiotClient:
         return await self._get(rot.plataforma, f"/lol/league/v4/{liga}leagues/by-queue/{fila}")
 
     async def ids_partidas(
-        self, rot: Roteamento, puuid: str, quantidade: int = 20, tipo: str = "ranked"
+        self,
+        rot: Roteamento,
+        puuid: str,
+        quantidade: int = 20,
+        tipo: str = "ranked",
+        inicio: int = 0,
     ) -> list[str]:
-        """Match-V5 (host regional) -> IDs das partidas mais recentes (ex.: "BR1_3292532308")."""
-        caminho = f"/lol/match/v5/matches/by-puuid/{puuid}/ids?type={tipo}&count={quantidade}"
+        """Match-V5 (host regional) -> IDs das partidas mais recentes (ex.: "BR1_3292532308").
+
+        No máximo 100 por chamada; `inicio` pula as N mais recentes (paginação).
+        """
+        caminho = (
+            f"/lol/match/v5/matches/by-puuid/{puuid}/ids"
+            f"?type={tipo}&start={inicio}&count={quantidade}"
+        )
         return await self._get(rot.regional, caminho)
 
     async def partida(self, rot: Roteamento, match_id: str) -> dict:
         """Match-V5 (host regional) -> detalhes completos de uma partida."""
         return await self._get(rot.regional, f"/lol/match/v5/matches/{match_id}")
+
+    async def entradas_liga(
+        self, rot: Roteamento, tier: str, divisao: str, pagina: int = 1, fila: str = "RANKED_SOLO_5x5"
+    ) -> list[dict]:
+        """League-V4 (plataforma): jogadores de um elo/divisão abaixo de Mestre (205 por página)."""
+        return await self._get(
+            rot.plataforma, f"/lol/league/v4/entries/{fila}/{tier}/{divisao}?page={pagina}"
+        )
+

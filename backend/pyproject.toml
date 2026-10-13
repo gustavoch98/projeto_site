@@ -20,6 +20,13 @@ dev = [
     "pytest-asyncio>=0.24",
     "respx>=0.21",
 ]
+# Ambiente de exploração de dados (notebooks): pip install -e ".[analise]"
+analise = [
+    "jupyterlab>=4",
+    "pandas>=2.2",
+    "matplotlib>=3.9",
+    "psycopg[binary]>=3.2",  # driver síncrono, usado pelo pandas.read_sql
+]
 
 [build-system]
 requires = ["setuptools>=75"]

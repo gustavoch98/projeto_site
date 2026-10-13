@@ -55,3 +55,16 @@ Para testar só a chave da Riot: `python scripts/testar_chave.py "Nome#TAG"`.
 | POST | `/api/players/{region}/{gameName}/{tagLine}/refresh` | Força atualização (mínimo de 2 min entre atualizações) |
 | GET | `/api/players/search?q=hazz&region=br` | Autocomplete: jogadores já salvos cujo nome começa com `q` (não consulta a Riot) |
 | GET | `/health` | Status da API e do banco |
+
+## Exploração de dados
+
+Notebooks em `backend/notebooks/` analisam as partidas salvas no Postgres (ex.: `01_horario_e_tilt.ipynb`).
+
+```bash
+cd backend
+pip install -e ".[analise]"
+# coleta históricos longos: um jogador + amostra de 10 jogadores por elo
+python scripts/coletar_partidas.py --riot-id "Nome#TAG" --partidas 300 --amostra 10
+jupyter lab notebooks
+```
+
