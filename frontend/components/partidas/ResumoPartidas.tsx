@@ -15,15 +15,15 @@ export default function ResumoPartidas({ resumo, campeoes }: { resumo: Resumo; c
           Últimas {resumo.jogos} partidas · {resumo.vitorias}V {resumo.derrotas}D
         </p>
         <p className={`text-3xl font-bold ${corWinrate(resumo.winrate)}`}>{resumo.winrate}%</p>
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-red-500/40">
-          <div className="h-full bg-sky-500" style={{ width: `${resumo.winrate}%` }} />
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-neutro">
+          <div className="h-full bg-destaque" style={{ width: `${resumo.winrate}%` }} />
         </div>
       </div>
 
       <div>
         <p className="text-xs text-texto-fraco">Média por partida</p>
         <p className="text-lg font-semibold">
-          {umaCasa(resumo.abates)} / <span className="text-red-400">{umaCasa(resumo.mortes)}</span> /{" "}
+          {umaCasa(resumo.abates)} / <span className="text-texto-fraco">{umaCasa(resumo.mortes)}</span> /{" "}
           {umaCasa(resumo.assistencias)}
         </p>
         <p className="text-sm text-texto-fraco">

@@ -117,7 +117,7 @@ export default function BuscaRiotId() {
         />
         <button
           type="submit"
-          className="bg-destaque px-4 font-semibold text-white transition hover:bg-blue-500 sm:px-6"
+          className="bg-destaque px-4 font-semibold text-fundo transition hover:bg-destaque-claro sm:px-6"
         >
           Buscar
         </button>
@@ -168,7 +168,7 @@ export default function BuscaRiotId() {
       )}
 
       {erro && (
-        <p role="alert" className="mt-2 text-sm text-red-400">
+        <p role="alert" className="mt-2 text-sm text-erro">
           {erro}
         </p>
       )}

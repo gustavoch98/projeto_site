@@ -47,7 +47,7 @@ export default function CardCampeao({ campeao: c, geral, minimo, nome, imagem }:
       </header>
 
       <p className="text-sm">
-        {decimal(c.abates)} / <span className="text-red-400">{decimal(c.mortes)}</span> / {decimal(c.assistencias)}
+        {decimal(c.abates)} / <span className="text-texto-fraco">{decimal(c.mortes)}</span> / {decimal(c.assistencias)}
         <span className="text-texto-fraco"> por partida</span>
       </p>
 

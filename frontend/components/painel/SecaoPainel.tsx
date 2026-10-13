@@ -53,9 +53,9 @@ function Destaque({ insights, comparacao }: { insights: InsightsHorario; compara
 
   return (
     <section className="rounded-xl border border-borda bg-painel p-5">
-      <p className="text-xs font-semibold uppercase tracking-wide text-texto-fraco">Seu melhor horário</p>
+      <p className="inline-block -rotate-2 bg-destaque px-2 py-0.5 font-mono text-xs font-bold uppercase text-fundo">Seu melhor horário</p>
       <p className="mt-1 text-xl font-bold sm:text-2xl">
-        Você rende mais <span className="text-sky-400">{expressaoPeriodo(melhor)}</span>
+        Você rende mais <span className="text-destaque">{expressaoPeriodo(melhor)}</span>
       </p>
       <p className="mt-2 text-sm text-texto-fraco">
         <span className="text-texto">{porcentagem(melhor.winrate!)}</span> de vitórias em {melhor.jogos} partidas, contra{" "}
@@ -63,7 +63,7 @@ function Destaque({ insights, comparacao }: { insights: InsightsHorario; compara
         <span className="text-texto">{diferencaPontos} pontos</span> de diferença. Sua média geral é{" "}
         {porcentagem(insights.winrate_geral!)}.
       </p>
-      <p className={`mt-3 inline-block rounded-full px-3 py-1 text-xs ${consistente ? "bg-sky-500/15 text-sky-300" : "bg-zinc-500/15 text-zinc-300"}`}>
+      <p className={`mt-3 inline-block px-3 py-1 text-xs ${consistente ? "bg-destaque font-semibold text-fundo" : "border border-borda text-texto-fraco"}`}>
         {consistente
           ? "Com essa quantidade de partidas, dificilmente a diferença é só acaso."
           : "Ainda pode ser acaso: com mais partidas o resultado fica mais confiável."}

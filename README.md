@@ -1,6 +1,6 @@
-# LoL Stats
+# Raio (raio.gg)
 
-Site de estatísticas de League of Legends (estilo OP.GG / DeepLoL): digite um Riot ID (`Nome#TAG`) e veja o perfil do jogador com dados da API oficial da Riot.
+**O raio-x do seu jogo.** Site de estatísticas e análises de League of Legends (outros jogos no futuro): digite um Riot ID (`Nome#TAG`) e veja elo, partidas, desempenho por campeão e análises do que realmente decide as suas vitórias, com dados da API oficial da Riot.
 
 > Projeto em desenvolvimento. Veja o planejamento completo em [PROJETO.md](PROJETO.md).
 

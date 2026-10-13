@@ -26,7 +26,7 @@ export function corElo(tier: string): string {
 }
 
 export function corWinrate(winrate: number): string {
-  if (winrate >= 60) return "text-amber-300";
-  if (winrate >= 50) return "text-sky-400";
-  return "text-zinc-400";
+  if (winrate >= 60) return "text-destaque";
+  if (winrate >= 50) return "text-texto";
+  return "text-texto-fraco";
 }

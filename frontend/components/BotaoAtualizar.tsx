@@ -23,7 +23,7 @@ export default function BotaoAtualizar({ regiao, nome, tag }: Props) {
       <button
         onClick={clicar}
         disabled={pendente}
-        className="rounded-lg bg-destaque px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-wait disabled:opacity-60"
+        className="rounded-lg bg-destaque px-4 py-2 text-sm font-semibold text-fundo transition hover:bg-destaque-claro disabled:cursor-wait disabled:opacity-60"
       >
         {pendente ? "Atualizando..." : "Atualizar"}
       </button>

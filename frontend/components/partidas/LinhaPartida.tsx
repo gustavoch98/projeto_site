@@ -8,11 +8,11 @@ import { FILAS, formatarDuracao, formatarKda } from "@/lib/partidas";
 type Tabela = Record<number, { nome: string; imagem: string }>;
 type Props = { partida: Partida; versao: string; campeoes: Tabela; feiticos: Tabela };
 
-// Cores por resultado: azul = vitória, vermelho = derrota, cinza = remake
+// Cores por resultado: limão = vitória, branco = derrota, cinza = remake (sem vermelho/verde)
 function estilo(p: Partida) {
-  if (p.remake) return { borda: "border-l-zinc-500", texto: "text-zinc-400", rotulo: "Remake" };
-  if (p.win) return { borda: "border-l-sky-500", texto: "text-sky-400", rotulo: "Vitória" };
-  return { borda: "border-l-red-500", texto: "text-red-400", rotulo: "Derrota" };
+  if (p.remake) return { borda: "border-l-neutro", texto: "text-texto-fraco", rotulo: "Remake" };
+  if (p.win) return { borda: "border-l-destaque", texto: "text-destaque", rotulo: "Vitória" };
+  return { borda: "border-l-texto-fraco", texto: "text-texto", rotulo: "Derrota" };
 }
 
 export default function LinhaPartida({ partida: p, versao, campeoes, feiticos }: Props) {
@@ -67,7 +67,7 @@ export default function LinhaPartida({ partida: p, versao, campeoes, feiticos }:
       {/* K/D/A */}
       <div className="w-24 text-center">
         <p className="font-semibold">
-          {p.kills} / <span className="text-red-400">{p.deaths}</span> / {p.assists}
+          {p.kills} / <span className="text-texto-fraco">{p.deaths}</span> / {p.assists}
         </p>
         <p className="text-xs text-texto-fraco">{formatarKda(p.kda)} KDA</p>
       </div>

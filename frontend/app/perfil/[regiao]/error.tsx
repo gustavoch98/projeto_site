@@ -9,7 +9,7 @@ export default function ErroPerfil({ retry }: { error: Error & { digest?: string
       <p className="text-texto-fraco">Não foi possível carregar este perfil.</p>
       <button
         onClick={() => retry()}
-        className="rounded-lg bg-destaque px-4 py-2 font-semibold text-white hover:bg-blue-500"
+        className="rounded-lg bg-destaque px-4 py-2 font-semibold text-fundo hover:bg-destaque-claro"
       >
         Tentar novamente
       </button>

@@ -73,7 +73,7 @@ export default async function SecaoCampeoes({ regiao, nome, tag }: Props) {
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-lg font-semibold">Mais jogados</h2>
           <p className="text-xs text-texto-fraco">
-            <span className="text-sky-400">▲</span> / <span className="text-red-400">▼</span> = acima / abaixo da sua média
+            <span className="text-destaque">▲</span> / <span className="text-texto-fraco">▼</span> = acima / abaixo da sua média
             geral ({decimal(geral.kda, 2)} KDA · {decimal(geral.cs_por_minuto)} CS/min)
           </p>
         </div>

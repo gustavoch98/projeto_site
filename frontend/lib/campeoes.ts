@@ -32,8 +32,8 @@ export function compararComMedia(valor: number, media: number, casas = 1): Compa
   }
   const formatado = Math.abs(diferenca).toLocaleString("pt-BR", { maximumFractionDigits: casas });
   return diferenca > 0
-    ? { texto: `▲ ${formatado}`, cor: "text-sky-400" }
-    : { texto: `▼ ${formatado}`, cor: "text-red-400" };
+    ? { texto: `▲ ${formatado}`, cor: "text-destaque" }
+    : { texto: `▼ ${formatado}`, cor: "text-texto-fraco" };
 }
 
 export const decimal = (v: number, casas = 1) => v.toLocaleString("pt-BR", { maximumFractionDigits: casas });

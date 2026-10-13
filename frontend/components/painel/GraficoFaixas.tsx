@@ -26,7 +26,7 @@ export default function GraficoFaixas({ titulo, faixas, media }: Props) {
 
         {faixas.map((f) => {
           const ok = confiavel(f);
-          const cor = !ok ? "bg-zinc-600" : f.winrate! >= media ? "bg-sky-500" : "bg-red-500/80";
+          const cor = !ok ? "bg-neutro" : f.winrate! >= media ? "bg-destaque" : "border-2 border-texto";
           const descricao = f.winrate === null
             ? `${f.rotulo}: sem partidas`
             : `${f.rotulo}: ${porcentagem(f.winrate)} de vitórias em ${f.jogos} partidas` +

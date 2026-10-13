@@ -14,7 +14,7 @@ import { riotIdDaUrl } from "@/lib/riot-id";
 
 type Props = LayoutProps<"/perfil/[regiao]/[riotId]">;
 
-// Título da aba do navegador, ex.: "Hazze Gu#hazze · LoL Stats"
+// Título da aba do navegador, ex.: "Hazze Gu#hazze · Raio"
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { riotId } = await params;
   const id = riotIdDaUrl(riotId);
@@ -38,8 +38,8 @@ export default async function LayoutPerfil({ params, children }: Props) {
 
   if (resultado.tipo === "erro") {
     return (
-      <div className="rounded-xl border border-red-900/60 bg-red-950/30 p-6 text-center">
-        <p className="font-semibold text-red-300">{resultado.mensagem}</p>
+      <div className="rounded-xl border border-erro/50 bg-erro/10 p-6 text-center">
+        <p className="font-semibold text-erro">{resultado.mensagem}</p>
         <Link href={`/perfil/${regiao}/${riotId}`} className="mt-4 inline-block text-sm text-destaque hover:underline">
           Tentar novamente
         </Link>
