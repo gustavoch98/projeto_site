@@ -23,13 +23,17 @@ export default function CardRanked({ titulo, fila }: Props) {
         </div>
       ) : (
         <div className="flex items-center gap-4">
-          <Image
-            src={urlEmblemaElo(fila.tier)}
-            alt={`Emblema ${nomeElo(fila.tier, fila.rank)}`}
-            width={80}
-            height={80}
-            className="size-20 scale-150 object-contain"
-          />
+          {/* O PNG original (2560x1440) tem muita borda transparente em volta do emblema:
+              recortamos um quadrado (overflow-hidden) e ampliamos a imagem dentro dele. */}
+          <div className="relative size-20 shrink-0 overflow-hidden">
+            <Image
+              src={urlEmblemaElo(fila.tier)}
+              alt={`Emblema ${nomeElo(fila.tier, fila.rank)}`}
+              fill
+              sizes="240px"
+              className="scale-[2.4] object-cover"
+            />
+          </div>
           <div className="flex-1">
             <p className={`text-xl font-bold ${corElo(fila.tier)}`}>
               {nomeElo(fila.tier, fila.rank)}

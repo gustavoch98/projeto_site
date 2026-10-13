@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
 from app.db import get_session
 from app.riot.client import RiotClient
-from app.schemas.player import PlayerProfile
-from app.services.players import buscar_perfil
+from app.schemas.player import PlayerProfile, PlayerSuggestion
+from app.services.players import buscar_perfil, sugerir_jogadores
 
 router = APIRouter(prefix="/api/players", tags=["players"])
 
@@ -13,6 +13,16 @@ router = APIRouter(prefix="/api/players", tags=["players"])
 def get_riot_client(request: Request) -> RiotClient:
     """O cliente é criado uma vez na inicialização (ver main.py) e compartilhado."""
     return request.app.state.riot
+
+
+@router.get("/search", response_model=list[PlayerSuggestion])
+async def sugerir(
+    q: str = Query(max_length=40, description="Início do nome, opcionalmente com #TAG"),
+    region: str = "br",
+    session: AsyncSession = Depends(get_session),
+):
+    """Autocomplete: jogadores já salvos no banco cujo nome começa com `q`. Não consulta a Riot."""
+    return await sugerir_jogadores(session, region, q)
 
 
 @router.get("/{region}/{game_name}/{tag_line}", response_model=PlayerProfile)

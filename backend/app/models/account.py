@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -29,6 +29,14 @@ Index(
     func.lower(Account.tag_line),
     Account.region,
     unique=True,
+)
+
+# Autocomplete: busca por prefixo do nome (LIKE 'hazz%'). Com a collation en_US do banco,
+# o índice só serve para LIKE se usar text_pattern_ops (compara byte a byte).
+Index(
+    "ix_accounts_nome_prefixo",
+    Account.region,
+    text("lower(game_name) text_pattern_ops"),
 )
 
 

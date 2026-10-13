@@ -30,3 +30,14 @@ class PlayerProfile(BaseModel):
     updated_at: datetime
     refresh_available_at: datetime  # a partir de quando o botão "Atualizar" consulta a Riot
     cached: bool  # True = veio do banco; False = acabou de vir da Riot
+
+
+class PlayerSuggestion(BaseModel):
+    """Item da lista do autocomplete (versão resumida do perfil)."""
+
+    game_name: str
+    tag_line: str
+    region: str
+    profile_icon_id: int
+    summoner_level: int
+    solo: RankedQueue | None

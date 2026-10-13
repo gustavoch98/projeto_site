@@ -250,4 +250,8 @@ Cada fase só começa depois que a anterior estiver funcionando e eu confirmar.
 | 2026-10-13 | Emblemas de elo vêm do **CommunityDragon** (`raw.communitydragon.org`) | O Data Dragon não tem emblemas de elo |
 | 2026-10-13 | Front chama a API **só pelo servidor do Next.js** (Server Components e Server Action do botão "Atualizar"); `API_URL` sem `NEXT_PUBLIC_` | O navegador não precisa conhecer o endereço do back-end, e não dependemos de CORS |
 | 2026-10-13 | URL do perfil usa o **último hífen** como separador (`/perfil/br/Nome-TAG`) | A TAG só tem letras e números, mas o nome pode ter hífen |
+| 2026-10-13 | **Autocomplete** na busca (adicionado ao MVP a pedido): `GET /api/players/search` busca por prefixo do nome **no nosso banco**, com índice `lower(game_name) text_pattern_ops` | A API da Riot não tem busca por prefixo; como no OP.GG, as sugestões vêm dos jogadores que o site já conhece. A base cresce com as buscas e, na Fase 4, com as partidas |
+| 2026-10-13 | A `#TAG` é opcional na busca: sem ela, tentamos `#BR1` | Simplifica o uso; a página de "não encontrado" explica a tentativa |
+| 2026-10-13 | Front acessa o autocomplete por um **Route Handler** do Next (`/api/sugestoes`), que repassa ao FastAPI | Mantém a regra de que o navegador não chama o back-end diretamente |
+| Pendente | Script de "semente" com jogadores do topo do ranking BR (Mestre+) para popular o autocomplete | Deixado para depois do deploy (mais rápido com a chave de produção) |
 

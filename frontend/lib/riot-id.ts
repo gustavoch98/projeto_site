@@ -2,16 +2,26 @@
 
 export type RiotId = { nome: string; tag: string };
 
+// Quando a pessoa digita só o nome, tentamos a TAG mais comum do servidor brasileiro
+export const TAG_PADRAO = "BR1";
+
+/** Separa o que foi digitado em nome e TAG (a TAG pode estar vazia), sem validar. */
+export function separarTexto(texto: string): { nome: string; tag: string } {
+  const [nome, tag = ""] = texto.split("#");
+  return { nome: nome.replace(/\s+/g, " ").trim(), tag: tag.replace(/\s+/g, "") };
+}
+
 /** Valida e normaliza o texto digitado na busca. Devolve o Riot ID ou uma mensagem de erro. */
 export function lerRiotId(texto: string): RiotId | { erro: string } {
-  const partes = texto.split("#");
-  if (partes.length !== 2) {
+  if (texto.split("#").length > 2) {
     return { erro: "Use o formato Nome#TAG (ex.: Hazze Gu#hazze)." };
   }
-  const nome = partes[0].replace(/\s+/g, " ").trim();
-  const tag = partes[1].replace(/\s+/g, "");
+  const { nome, tag } = separarTexto(texto);
   if (nome.length < 1 || nome.length > 16) {
     return { erro: "O nome deve ter entre 1 e 16 caracteres." };
+  }
+  if (tag === "") {
+    return { nome, tag: TAG_PADRAO };
   }
   if (!/^[\p{L}\p{N}]{1,5}$/u.test(tag)) {
     return { erro: "A TAG deve ter de 1 a 5 letras ou números." };

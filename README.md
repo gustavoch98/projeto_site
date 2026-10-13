@@ -53,4 +53,5 @@ Para testar só a chave da Riot: `python scripts/testar_chave.py "Nome#TAG"`.
 |---|---|---|
 | GET | `/api/players/{region}/{gameName}/{tagLine}` | Perfil (conta, nível, ranked Solo/Flex), com cache de 10 min |
 | POST | `/api/players/{region}/{gameName}/{tagLine}/refresh` | Força atualização (mínimo de 2 min entre atualizações) |
+| GET | `/api/players/search?q=hazz&region=br` | Autocomplete: jogadores já salvos cujo nome começa com `q` (não consulta a Riot) |
 | GET | `/health` | Status da API e do banco |

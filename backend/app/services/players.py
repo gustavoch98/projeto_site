@@ -12,12 +12,16 @@ from app.config import Settings
 from app.models import Account, RankedEntry
 from app.riot.client import RiotChaveInvalida, RiotClient, RiotIndisponivel, RiotLimiteExcedido
 from app.riot.routing import obter_roteamento
-from app.schemas.player import PlayerProfile, RankedQueue
+from app.schemas.player import PlayerProfile, PlayerSuggestion, RankedQueue
 
 logger = logging.getLogger(__name__)
 
 FILA_SOLO = "RANKED_SOLO_5x5"
 FILA_FLEX = "RANKED_FLEX_SR"
+
+# Autocomplete
+TAMANHO_MINIMO_BUSCA = 2
+LIMITE_SUGESTOES = 8
 
 # Erros em que vale a pena devolver dados antigos do banco em vez de falhar
 ERROS_TEMPORARIOS = (RiotIndisponivel, RiotLimiteExcedido, RiotChaveInvalida)
@@ -126,8 +130,9 @@ async def salvar_dados_riot(
     return conta
 
 
-def montar_perfil(conta: Account, settings: Settings, cached: bool) -> PlayerProfile:
-    filas = {
+def filas_ranked(conta: Account) -> dict[str, RankedQueue]:
+    """Entradas de ranked da conta indexadas pelo tipo de fila."""
+    return {
         entrada.queue_type: RankedQueue(
             tier=entrada.tier,
             rank=entrada.rank,
@@ -137,6 +142,10 @@ def montar_perfil(conta: Account, settings: Settings, cached: bool) -> PlayerPro
         )
         for entrada in conta.ranked_entries
     }
+
+
+def montar_perfil(conta: Account, settings: Settings, cached: bool) -> PlayerProfile:
+    filas = filas_ranked(conta)
     return PlayerProfile(
         puuid=conta.puuid,
         game_name=conta.game_name,
@@ -151,3 +160,46 @@ def montar_perfil(conta: Account, settings: Settings, cached: bool) -> PlayerPro
         + timedelta(seconds=settings.refresh_cooldown_seconds),
         cached=cached,
     )
+
+
+async def sugerir_jogadores(
+    session: AsyncSession, region: str, texto: str
+) -> list[PlayerSuggestion]:
+    """Jogadores JÁ SALVOS no banco cujo nome começa com o texto digitado.
+
+    A API da Riot não tem busca por prefixo, então só aparecem jogadores que o site já viu.
+    Se o texto tiver '#', o que vem depois filtra a TAG por prefixo (ex.: "hazze gu#ha").
+    """
+    region = region.lower()
+    obter_roteamento(region)  # valida a região
+    nome, _, tag = texto.partition("#")
+    nome = re.sub(r"\s+", " ", nome).strip().lower()
+    tag = re.sub(r"\s+", "", tag).lower()
+    if len(nome) < TAMANHO_MINIMO_BUSCA:
+        return []
+
+    consulta = select(Account).where(
+        Account.region == region,
+        # autoescape: um "%" ou "_" digitado pelo usuário é tratado como texto, não como curinga
+        func.lower(Account.game_name).startswith(nome, autoescape=True),
+    )
+    if tag:
+        consulta = consulta.where(func.lower(Account.tag_line).startswith(tag, autoescape=True))
+
+    # Nomes mais curtos primeiro: quem digitou "hazz" provavelmente quer "Hazze", não "Hazzelnut123"
+    consulta = consulta.order_by(func.length(Account.game_name), Account.game_name).limit(
+        LIMITE_SUGESTOES
+    )
+    contas = (await session.scalars(consulta)).all()
+
+    return [
+        PlayerSuggestion(
+            game_name=conta.game_name,
+            tag_line=conta.tag_line,
+            region=conta.region,
+            profile_icon_id=conta.profile_icon_id,
+            summoner_level=conta.summoner_level,
+            solo=filas_ranked(conta).get(FILA_SOLO),
+        )
+        for conta in contas
+    ]

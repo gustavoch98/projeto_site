@@ -66,3 +66,25 @@ export function buscarPerfil(regiao: string, nome: string, tag: string) {
 export function atualizarPerfil(regiao: string, nome: string, tag: string) {
   return chamarApi(urlPerfil(regiao, nome, tag) + "/refresh", "POST");
 }
+
+// --- Autocomplete ------------------------------------------------------------
+
+// Espelha o schema PlayerSuggestion do back-end
+export type SugestaoApi = {
+  game_name: string;
+  tag_line: string;
+  region: string;
+  profile_icon_id: number;
+  summoner_level: number;
+  solo: FilaRanked | null;
+};
+
+export async function sugerirJogadores(texto: string, regiao = "br"): Promise<SugestaoApi[]> {
+  const params = new URLSearchParams({ q: texto, region: regiao });
+  try {
+    const resposta = await fetch(`${API_URL}/api/players/search?${params}`);
+    return resposta.ok ? await resposta.json() : [];
+  } catch {
+    return []; // autocomplete é um extra: se falhar, simplesmente não mostra sugestões
+  }
+}
