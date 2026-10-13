@@ -30,3 +30,6 @@ Thumbs.db
 
 # Dados coletados para exploração (amostra de jogadores, exports)
 backend/dados/
+
+# Jupyter
+.ipynb_checkpoints/
