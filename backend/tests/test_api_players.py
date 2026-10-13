@@ -169,3 +169,29 @@ async def test_regiao_nao_suportada_retorna_404(api):
 
 async def test_health(api):
     assert (await api.get("/health")).json() == {"status": "ok", "database": "ok"}
+
+
+async def test_pedidos_simultaneos_com_cache_vencido_nao_quebram(api, riot_mock):
+    """A página do perfil faz vários pedidos ao mesmo tempo (layout + seções). Com o cache
+    vencido, todos tentam regravar o elo juntos: precisa funcionar sem erro de chave duplicada."""
+    import asyncio
+
+    flex = {**SOLO, "queueType": "RANKED_FLEX_SR", "tier": "SILVER"}
+    simular_riot(riot_mock, ranked=[SOLO, flex])
+    await api.get(PERFIL)
+    await envelhecer_cache(minutos=60)
+
+    respostas = await asyncio.gather(*(api.get(PERFIL) for _ in range(4)))
+
+    assert [r.status_code for r in respostas] == [200, 200, 200, 200]
+    assert respostas[0].json()["flex"]["tier"] == "SILVER"
+
+
+async def test_pedidos_simultaneos_de_jogador_novo_nao_quebram(api, riot_mock):
+    import asyncio
+
+    simular_riot(riot_mock)
+
+    respostas = await asyncio.gather(*(api.get(PERFIL) for _ in range(4)))
+
+    assert [r.status_code for r in respostas] == [200, 200, 200, 200]

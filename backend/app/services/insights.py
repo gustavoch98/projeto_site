@@ -5,7 +5,12 @@ import math
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas.insights import FaixaDesempenho, InsightsHorario
+from app.schemas.insights import (
+    CampeoesJogador,
+    EstatisticasCampeao,
+    FaixaDesempenho,
+    InsightsHorario,
+)
 
 # Os horários do banco estão em UTC; o jogador pensa no horário local.
 FUSO_BR = "America/Sao_Paulo"
@@ -108,3 +113,88 @@ async def calcular_insights_horario(
         por_dia_semana=montar_faixas(por_dia, DIAS_SEMANA),
         coletando_historico=coletando_historico,
     )
+
+
+# --- Campeões ---------------------------------------------------------------------
+
+MINIMO_PARTIDAS_CAMPEAO = 10
+
+# Somas de cada grupo; as médias e taxas são calculadas em Python a partir delas.
+COLUNAS_ESTATISTICAS = """
+       count(*) AS jogos,
+       sum(win::int) AS vitorias,
+       sum(kills) AS abates,
+       sum(deaths) AS mortes,
+       sum(assists) AS assistencias,
+       sum(cs) AS cs,
+       sum(damage_to_champions) AS dano,
+       sum(vision_score) AS visao,
+       sum(gold) AS ouro,
+       sum(game_duration) AS segundos,
+       avg(kill_participation) AS participacao_abates,
+       -- mode(): o valor mais frequente do grupo (a rota que ele mais joga)
+       mode() WITHIN GROUP (ORDER BY nullif(team_position, '')) AS rota_principal,
+       max(game_start) AS ultima_partida
+"""
+
+CONSULTA_POR_CAMPEAO = f"""
+SELECT champion_id, max(champion_name) AS champion_name, {COLUNAS_ESTATISTICAS}
+FROM match_participants
+WHERE {FILTRO_PARTIDAS}
+GROUP BY champion_id
+ORDER BY jogos DESC, vitorias DESC
+"""
+
+# Todas as partidas juntas (sem GROUP BY). O HAVING evita uma linha de nulos se não houver partidas.
+CONSULTA_GERAL = f"""
+SELECT NULL::int AS champion_id, NULL::text AS champion_name, {COLUNAS_ESTATISTICAS}
+FROM match_participants
+WHERE {FILTRO_PARTIDAS}
+HAVING count(*) > 0
+"""
+
+
+def montar_estatisticas(linha) -> EstatisticasCampeao:
+    minutos = linha.segundos / 60
+    baixo, alto = wilson(linha.vitorias, linha.jogos)
+    return EstatisticasCampeao(
+        champion_id=linha.champion_id,
+        champion_name=linha.champion_name,
+        jogos=linha.jogos,
+        vitorias=linha.vitorias,
+        winrate=linha.vitorias / linha.jogos,
+        ic_baixo=baixo,
+        ic_alto=alto,
+        kda=(linha.abates + linha.assistencias) / max(linha.mortes, 1),
+        abates=linha.abates / linha.jogos,
+        mortes=linha.mortes / linha.jogos,
+        assistencias=linha.assistencias / linha.jogos,
+        cs_por_minuto=linha.cs / minutos,
+        dano_por_minuto=linha.dano / minutos,
+        visao_por_minuto=linha.visao / minutos,
+        ouro_por_minuto=linha.ouro / minutos,
+        participacao_abates=(
+            float(linha.participacao_abates) if linha.participacao_abates is not None else None
+        ),
+        rota_principal=linha.rota_principal,
+        ultima_partida=linha.ultima_partida,
+    )
+
+
+async def calcular_campeoes(
+    session: AsyncSession, puuid: str, coletando_historico: bool
+) -> CampeoesJogador:
+    params = {"puuid": puuid}
+    por_campeao = await session.execute(text(CONSULTA_POR_CAMPEAO), params)
+    geral = await session.execute(text(CONSULTA_GERAL), params)
+
+    campeoes = [montar_estatisticas(linha) for linha in por_campeao]
+    linha_geral = geral.first()
+    return CampeoesJogador(
+        partidas_analisadas=sum(c.jogos for c in campeoes),
+        minimo_partidas=MINIMO_PARTIDAS_CAMPEAO,
+        geral=montar_estatisticas(linha_geral) if linha_geral else None,
+        campeoes=campeoes,
+        coletando_historico=coletando_historico,
+    )
+

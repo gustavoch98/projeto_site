@@ -5,7 +5,8 @@ import logging
 import re
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
@@ -40,6 +41,41 @@ def normalizar_riot_id(game_name: str, tag_line: str) -> tuple[str, str]:
     return nome, tag
 
 
+async def conta_no_banco(session: AsyncSession, region: str, nome: str, tag: str) -> Account | None:
+    """Conta já salva com esse Riot ID (sem diferenciar maiúsculas), sem consultar a Riot."""
+    return await session.scalar(
+        select(Account).where(
+            func.lower(Account.game_name) == nome.lower(),
+            func.lower(Account.tag_line) == tag.lower(),
+            Account.region == region,
+        )
+    )
+
+
+async def conta_para_consulta(
+    session: AsyncSession,
+    riot: RiotClient,
+    settings: Settings,
+    region: str,
+    game_name: str,
+    tag_line: str,
+) -> Account:
+    """A conta para as seções do perfil (partidas, painel, campeões).
+
+    Essas seções só precisam saber QUEM é o jogador: usam a conta do banco mesmo com o cache
+    vencido (quem mantém o elo atualizado é a rota do perfil). Só vão à Riot se o jogador
+    nunca foi visto. Isso evita que uma página faça várias consultas iguais à Riot ao mesmo tempo.
+    """
+    region = region.lower()
+    obter_roteamento(region)  # valida a região
+    nome, tag = normalizar_riot_id(game_name, tag_line)
+    conta = await conta_no_banco(session, region, nome, tag)
+    if conta is None:
+        perfil = await buscar_perfil(session, riot, settings, region, nome, tag)
+        conta = await session.get(Account, perfil.puuid)
+    return conta
+
+
 async def buscar_perfil(
     session: AsyncSession,
     riot: RiotClient,
@@ -53,13 +89,7 @@ async def buscar_perfil(
     rot = obter_roteamento(region)
     nome, tag = normalizar_riot_id(game_name, tag_line)
 
-    conta = await session.scalar(
-        select(Account).where(
-            func.lower(Account.game_name) == nome.lower(),
-            func.lower(Account.tag_line) == tag.lower(),
-            Account.region == region,
-        )
-    )
+    conta = await conta_no_banco(session, region, nome, tag)
 
     if conta is not None:
         idade = datetime.now(UTC) - conta.updated_at
@@ -99,63 +129,87 @@ async def buscar_perfil(
 async def salvar_dados_riot(
     session: AsyncSession, region: str, dados_conta: dict, summoner: dict, ranked: list[dict]
 ) -> Account:
+    """Grava conta e elo vindos da Riot.
+
+    Usa "upsert" (INSERT ... ON CONFLICT DO UPDATE): a página do perfil faz vários pedidos ao
+    mesmo tempo e, com o cache vencido, mais de um pode gravar o mesmo jogador junto. Com o
+    upsert, o segundo vira uma atualização em vez de um erro de chave duplicada.
+    """
     agora = datetime.now(UTC)
-    conta = await session.get(Account, dados_conta["puuid"])
-    if conta is None:
-        conta = Account(puuid=dados_conta["puuid"])
-        session.add(conta)
+    puuid = dados_conta["puuid"]
 
     # O nome vem da Riot com as maiúsculas "oficiais", independente do que o usuário digitou
-    conta.game_name = dados_conta["gameName"]
-    conta.tag_line = dados_conta["tagLine"]
-    conta.region = region
-    conta.profile_icon_id = summoner["profileIconId"]
-    conta.summoner_level = summoner["summonerLevel"]
-    conta.updated_at = agora
+    dados = {
+        "game_name": dados_conta["gameName"],
+        "tag_line": dados_conta["tagLine"],
+        "region": region,
+        "profile_icon_id": summoner["profileIconId"],
+        "summoner_level": summoner["summonerLevel"],
+        "updated_at": agora,
+    }
+    await session.execute(
+        insert(Account)
+        .values(puuid=puuid, **dados)
+        .on_conflict_do_update(index_elements=[Account.puuid], set_=dados)
+    )
 
-    conta.ranked_entries = [
-        RankedEntry(
-            puuid=conta.puuid,
-            queue_type=entrada["queueType"],
-            tier=entrada["tier"],
-            rank=entrada["rank"],
-            league_points=entrada["leaguePoints"],
-            wins=entrada["wins"],
-            losses=entrada["losses"],
-            updated_at=agora,
-        )
-        for entrada in ranked
+    filas = [
+        {
+            "puuid": puuid,
+            "queue_type": e["queueType"],
+            "tier": e["tier"],
+            "rank": e["rank"],
+            "league_points": e["leaguePoints"],
+            "wins": e["wins"],
+            "losses": e["losses"],
+            "updated_at": agora,
+        }
+        for e in ranked
     ]
-    await registrar_historico(session, conta.puuid, conta.ranked_entries, agora)
+    # Filas que a Riot não devolveu mais (ex.: ficou unranked) saem do banco
+    await session.execute(
+        delete(RankedEntry).where(
+            RankedEntry.puuid == puuid,
+            RankedEntry.queue_type.not_in([f["queue_type"] for f in filas]),
+        )
+    )
+    if filas:
+        novos = insert(RankedEntry).values(filas)
+        await session.execute(
+            novos.on_conflict_do_update(
+                index_elements=[RankedEntry.puuid, RankedEntry.queue_type],
+                set_={
+                    coluna: novos.excluded[coluna]
+                    for coluna in ("tier", "rank", "league_points", "wins", "losses", "updated_at")
+                },
+            )
+        )
+
+    await registrar_historico(session, puuid, filas, agora)
     await session.flush()
-    return conta
+    # populate_existing: recarrega o objeto (e o elo) com o que acabou de ser gravado
+    return await session.get(Account, puuid, populate_existing=True)
 
 
 async def registrar_historico(
-    session: AsyncSession, puuid: str, entradas: list[RankedEntry], agora: datetime
+    session: AsyncSession, puuid: str, filas: list[dict], agora: datetime
 ) -> None:
     """Grava uma "foto" de cada fila cujo elo mudou desde a última foto."""
-    for entrada in entradas:
+    for fila in filas:
         ultima = await session.scalar(
             select(RankedHistory)
-            .where(RankedHistory.puuid == puuid, RankedHistory.queue_type == entrada.queue_type)
+            .where(RankedHistory.puuid == puuid, RankedHistory.queue_type == fila["queue_type"])
             .order_by(RankedHistory.recorded_at.desc())
             .limit(1)
         )
-        atual = (entrada.tier, entrada.rank, entrada.league_points, entrada.wins, entrada.losses)
-        if ultima is not None and atual == (
-            ultima.tier, ultima.rank, ultima.league_points, ultima.wins, ultima.losses
-        ):
+        campos = ("tier", "rank", "league_points", "wins", "losses")
+        if ultima is not None and all(getattr(ultima, c) == fila[c] for c in campos):
             continue
         session.add(
             RankedHistory(
                 puuid=puuid,
-                queue_type=entrada.queue_type,
-                tier=entrada.tier,
-                rank=entrada.rank,
-                league_points=entrada.league_points,
-                wins=entrada.wins,
-                losses=entrada.losses,
+                queue_type=fila["queue_type"],
+                **{c: fila[c] for c in campos},
                 recorded_at=agora,
             )
         )

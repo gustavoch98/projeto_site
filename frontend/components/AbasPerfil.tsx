@@ -8,6 +8,7 @@ import { useSelectedLayoutSegment } from "next/navigation";
 const ABAS = [
   { segmento: null, rotulo: "Visão geral", caminho: "" },
   { segmento: "partidas", rotulo: "Partidas", caminho: "/partidas" },
+  { segmento: "campeoes", rotulo: "Campeões", caminho: "/campeoes" },
 ];
 
 export default function AbasPerfil({ base }: { base: string }) {

@@ -6,17 +6,17 @@ from app.db import get_session
 from app.models import Account
 from app.riot.client import RiotClient
 from app.riot.routing import obter_roteamento
-from app.schemas.insights import InsightsHorario
+from app.schemas.insights import CampeoesJogador, InsightsHorario
 from app.schemas.match import MatchSummary
 from app.schemas.player import PlayerProfile, PlayerSuggestion
-from app.services.insights import calcular_insights_horario
+from app.services.insights import calcular_campeoes, calcular_insights_horario
 from app.services.matches import (
     completar_historico,
     historico_em_andamento,
     listar_partidas,
     precisa_completar_historico,
 )
-from app.services.players import buscar_perfil, sugerir_jogadores
+from app.services.players import buscar_perfil, conta_para_consulta, sugerir_jogadores
 
 router = APIRouter(prefix="/api/players", tags=["players"])
 
@@ -79,8 +79,7 @@ async def obter_partidas(
     Na primeira visita, agenda também a busca de um histórico mais longo (para o painel de
     insights). Ela roda depois que esta resposta é enviada, sem atrasar a página.
     """
-    perfil = await buscar_perfil(session, riot, settings, region, game_name, tag_line)
-    conta = await session.get(Account, perfil.puuid)
+    conta = await conta_para_consulta(session, riot, settings, region, game_name, tag_line)
     rot = obter_roteamento(region)
     partidas = await listar_partidas(session, riot, settings, rot, conta)
     if precisa_completar_historico(conta, settings):
@@ -100,8 +99,22 @@ async def obter_insights(
     settings: Settings = Depends(get_settings),
 ):
     """Painel do jogador: desempenho por período do dia e dia da semana (horário de Brasília)."""
-    perfil = await buscar_perfil(session, riot, settings, region, game_name, tag_line)
-    conta = await session.get(Account, perfil.puuid)
+    conta = await conta_para_consulta(session, riot, settings, region, game_name, tag_line)
     coletando = historico_em_andamento(conta.puuid) or precisa_completar_historico(conta, settings)
     return await calcular_insights_horario(session, conta.puuid, coletando)
+
+
+@router.get("/{region}/{game_name}/{tag_line}/champions", response_model=CampeoesJogador)
+async def obter_campeoes(
+    region: str,
+    game_name: str,
+    tag_line: str,
+    session: AsyncSession = Depends(get_session),
+    riot: RiotClient = Depends(get_riot_client),
+    settings: Settings = Depends(get_settings),
+):
+    """Desempenho por campeão (ranqueadas, sem remakes), do mais jogado ao menos jogado."""
+    conta = await conta_para_consulta(session, riot, settings, region, game_name, tag_line)
+    coletando = historico_em_andamento(conta.puuid) or precisa_completar_historico(conta, settings)
+    return await calcular_campeoes(session, conta.puuid, coletando)
 

@@ -164,3 +164,48 @@ export async function buscarInsights(
     return null;
   }
 }
+
+// --- Campeões ----------------------------------------------------------------
+
+// Espelha EstatisticasCampeao / CampeoesJogador (backend/app/schemas/insights.py)
+export type EstatisticasCampeao = {
+  champion_id: number | null;
+  champion_name: string | null;
+  jogos: number;
+  vitorias: number;
+  winrate: number;
+  ic_baixo: number;
+  ic_alto: number;
+  kda: number;
+  abates: number;
+  mortes: number;
+  assistencias: number;
+  cs_por_minuto: number;
+  dano_por_minuto: number;
+  visao_por_minuto: number;
+  ouro_por_minuto: number;
+  participacao_abates: number | null;
+  rota_principal: string | null;
+  ultima_partida: string;
+};
+
+export type CampeoesJogador = {
+  partidas_analisadas: number;
+  minimo_partidas: number;
+  geral: EstatisticasCampeao | null;
+  campeoes: EstatisticasCampeao[];
+  coletando_historico: boolean;
+};
+
+export async function buscarCampeoes(
+  regiao: string,
+  nome: string,
+  tag: string,
+): Promise<CampeoesJogador | null> {
+  try {
+    const resposta = await fetch(`${urlPerfil(regiao, nome, tag)}/champions`);
+    return resposta.ok ? await resposta.json() : null;
+  } catch {
+    return null;
+  }
+}

@@ -129,6 +129,8 @@ async def listar_partidas(
     limite: int = PARTIDAS_POR_SINCRONIZACAO,
 ) -> list[MatchSummary]:
     """Partidas mais recentes do jogador, sincronizando com a Riot antes quando necessário."""
+    # Guardado antes: se a sincronização falhar, o rollback "expira" o objeto conta
+    puuid = conta.puuid
     if precisa_sincronizar(conta, settings):
         try:
             novas = await sincronizar_partidas(session, riot, rot, conta)
@@ -140,7 +142,7 @@ async def listar_partidas(
 
     linhas = await session.scalars(
         select(MatchParticipant)
-        .where(MatchParticipant.puuid == conta.puuid)
+        .where(MatchParticipant.puuid == puuid)
         .order_by(MatchParticipant.game_start.desc())
         .limit(limite)
     )
