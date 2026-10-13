@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, func, text
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -16,6 +16,8 @@ class Account(Base):
     profile_icon_id: Mapped[int] = mapped_column(Integer)
     summoner_level: Mapped[int] = mapped_column(Integer)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # Última vez que buscamos as partidas na Riot (None = nunca)
+    matches_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     ranked_entries: Mapped[list["RankedEntry"]] = relationship(
         back_populates="account", cascade="all, delete-orphan", lazy="selectin"
@@ -36,7 +38,8 @@ Index(
 Index(
     "ix_accounts_nome_prefixo",
     Account.region,
-    text("lower(game_name) text_pattern_ops"),
+    func.lower(Account.game_name).label("nome_minusculo"),
+    postgresql_ops={"nome_minusculo": "text_pattern_ops"},
 )
 
 
@@ -55,3 +58,32 @@ class RankedEntry(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
     account: Mapped[Account] = relationship(back_populates="ranked_entries")
+
+
+class RankedHistory(Base):
+    """Uma "foto" do elo em uma fila, gravada sempre que algo muda (PDL, vitórias, derrotas).
+
+    Permite desenhar a evolução do PDL ao longo do tempo. Só existe a partir do momento em que
+    começamos a gravar, por isso vale coletar desde cedo.
+    """
+
+    __tablename__ = "ranked_history"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    puuid: Mapped[str] = mapped_column(ForeignKey("accounts.puuid", ondelete="CASCADE"))
+    queue_type: Mapped[str] = mapped_column(String(32))
+    tier: Mapped[str] = mapped_column(String(16))
+    rank: Mapped[str] = mapped_column(String(4))
+    league_points: Mapped[int] = mapped_column(Integer)
+    wins: Mapped[int] = mapped_column(Integer)
+    losses: Mapped[int] = mapped_column(Integer)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+Index(
+    "ix_ranked_history_puuid_fila_data",
+    RankedHistory.puuid,
+    RankedHistory.queue_type,
+    RankedHistory.recorded_at,
+)
+

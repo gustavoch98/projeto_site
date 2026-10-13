@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
-from app.models import Account, RankedEntry
+from app.models import Account, RankedEntry, RankedHistory
 from app.riot.client import RiotChaveInvalida, RiotClient, RiotIndisponivel, RiotLimiteExcedido
 from app.riot.routing import obter_roteamento
 from app.schemas.player import PlayerProfile, PlayerSuggestion, RankedQueue
@@ -126,8 +126,39 @@ async def salvar_dados_riot(
         )
         for entrada in ranked
     ]
+    await registrar_historico(session, conta.puuid, conta.ranked_entries, agora)
     await session.flush()
     return conta
+
+
+async def registrar_historico(
+    session: AsyncSession, puuid: str, entradas: list[RankedEntry], agora: datetime
+) -> None:
+    """Grava uma "foto" de cada fila cujo elo mudou desde a última foto."""
+    for entrada in entradas:
+        ultima = await session.scalar(
+            select(RankedHistory)
+            .where(RankedHistory.puuid == puuid, RankedHistory.queue_type == entrada.queue_type)
+            .order_by(RankedHistory.recorded_at.desc())
+            .limit(1)
+        )
+        atual = (entrada.tier, entrada.rank, entrada.league_points, entrada.wins, entrada.losses)
+        if ultima is not None and atual == (
+            ultima.tier, ultima.rank, ultima.league_points, ultima.wins, ultima.losses
+        ):
+            continue
+        session.add(
+            RankedHistory(
+                puuid=puuid,
+                queue_type=entrada.queue_type,
+                tier=entrada.tier,
+                rank=entrada.rank,
+                league_points=entrada.league_points,
+                wins=entrada.wins,
+                losses=entrada.losses,
+                recorded_at=agora,
+            )
+        )
 
 
 def filas_ranked(conta: Account) -> dict[str, RankedQueue]:

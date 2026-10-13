@@ -41,7 +41,12 @@ async def banco_de_teste():
 async def banco_limpo():
     """Esvazia as tabelas antes de cada teste que usa o banco."""
     async with engine.begin() as conn:
-        await conn.execute(text("TRUNCATE accounts, ranked_entries CASCADE"))
+        await conn.execute(
+            text(
+                "TRUNCATE accounts, ranked_entries, ranked_history, matches, match_participants"
+                " CASCADE"
+            )
+        )
 
 
 @pytest.fixture

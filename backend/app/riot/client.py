@@ -1,4 +1,4 @@
-"""Cliente assíncrono da API da Riot (Account-V1, Summoner-V4, League-V4)."""
+"""Cliente assíncrono da API da Riot (Account-V1, Summoner-V4, League-V4, Match-V5)."""
 
 import asyncio
 import logging
@@ -116,3 +116,14 @@ class RiotClient:
         liga: "challenger", "grandmaster" ou "master".
         """
         return await self._get(rot.plataforma, f"/lol/league/v4/{liga}leagues/by-queue/{fila}")
+
+    async def ids_partidas(
+        self, rot: Roteamento, puuid: str, quantidade: int = 20, tipo: str = "ranked"
+    ) -> list[str]:
+        """Match-V5 (host regional) -> IDs das partidas mais recentes (ex.: "BR1_3292532308")."""
+        caminho = f"/lol/match/v5/matches/by-puuid/{puuid}/ids?type={tipo}&count={quantidade}"
+        return await self._get(rot.regional, caminho)
+
+    async def partida(self, rot: Roteamento, match_id: str) -> dict:
+        """Match-V5 (host regional) -> detalhes completos de uma partida."""
+        return await self._get(rot.regional, f"/lol/match/v5/matches/{match_id}")

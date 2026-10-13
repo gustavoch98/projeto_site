@@ -3,8 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
 from app.db import get_session
+from app.models import Account
 from app.riot.client import RiotClient
+from app.riot.routing import obter_roteamento
+from app.schemas.match import MatchSummary
 from app.schemas.player import PlayerProfile, PlayerSuggestion
+from app.services.matches import listar_partidas
 from app.services.players import buscar_perfil, sugerir_jogadores
 
 router = APIRouter(prefix="/api/players", tags=["players"])
@@ -51,3 +55,19 @@ async def atualizar_perfil(
     return await buscar_perfil(
         session, riot, settings, region, game_name, tag_line, forcar=True
     )
+
+
+@router.get("/{region}/{game_name}/{tag_line}/matches", response_model=list[MatchSummary])
+async def obter_partidas(
+    region: str,
+    game_name: str,
+    tag_line: str,
+    session: AsyncSession = Depends(get_session),
+    riot: RiotClient = Depends(get_riot_client),
+    settings: Settings = Depends(get_settings),
+):
+    """Partidas ranqueadas recentes. Busca as que faltam na Riot quando o cache expirou."""
+    perfil = await buscar_perfil(session, riot, settings, region, game_name, tag_line)
+    conta = await session.get(Account, perfil.puuid)
+    return await listar_partidas(session, riot, settings, obter_roteamento(region), conta)
+

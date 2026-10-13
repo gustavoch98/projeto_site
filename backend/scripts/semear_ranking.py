@@ -6,7 +6,7 @@ Objetivo: dar uma base inicial para o autocomplete. Para cada jogador são 2 req
 Pode ser interrompido (Ctrl+C) e rodado de novo: jogadores que já estão no banco são pulados.
 
 Uso (na pasta backend, com o .venv ativado):
-    python scripts/semear_ranking.py                 # todos (~10 mil jogadores, ~3h30 com chave de dev)
+    python scripts/semear_ranking.py                 # todos (~10 mil jogadores; ~3h30 a 5h com chave de dev)
     python scripts/semear_ranking.py --limite 100    # só os 100 primeiros
 """
 
@@ -25,7 +25,12 @@ from sqlalchemy.exc import IntegrityError  # noqa: E402
 from app.config import get_settings  # noqa: E402
 from app.db import SessionLocal  # noqa: E402
 from app.models import Account  # noqa: E402
-from app.riot.client import RiotClient, RiotLimiteExcedido, RiotNaoEncontrado  # noqa: E402
+from app.riot.client import (  # noqa: E402
+    RiotClient,
+    RiotIndisponivel,
+    RiotLimiteExcedido,
+    RiotNaoEncontrado,
+)
 from app.riot.routing import REGIOES  # noqa: E402
 from app.services.players import FILA_SOLO, salvar_dados_riot  # noqa: E402
 
@@ -35,9 +40,11 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 REGIAO = "br"
 LIGAS = ["challenger", "grandmaster", "master"]
-# Um pouco abaixo do limite da chave (100/2min) para sobrar espaço para o site rodando junto
-LIMITES = [(18, 1.0), (90, 120.0)]
+# Abaixo do limite da chave (100/2min) para sobrar espaço para o site e o desenvolvimento.
+# Ajustável com --por-2min (ex.: 90 quando nada mais estiver usando a chave).
+POR_2MIN_PADRAO = 60
 TRABALHADORES = 4  # jogadores processados em paralelo (o rate limiter segura o ritmo)
+TENTATIVAS_FALHA_REDE = 3
 
 
 async def carregar_ranking(riot: RiotClient) -> list[tuple[str, dict]]:
@@ -58,9 +65,10 @@ async def puuids_ja_salvos() -> set[str]:
 
 
 async def semear_jogador(riot: RiotClient, tier: str, entrada: dict) -> str:
-    """Busca nome e ícone de um jogador e salva. Devolve 'ok', 'sumiu' ou 'conflito'."""
+    """Busca nome e ícone de um jogador e salva. Devolve 'ok', 'sumiu', 'conflito' ou 'falhou'."""
     rot = REGIOES[REGIAO]
     puuid = entrada["puuid"]
+    falhas = 0
     while True:
         try:
             conta, summoner = await asyncio.gather(
@@ -73,6 +81,13 @@ async def semear_jogador(riot: RiotClient, tier: str, entrada: dict) -> str:
             await asyncio.sleep(erro.retry_after)
         except RiotNaoEncontrado:
             return "sumiu"
+        except RiotIndisponivel as erro:
+            # Falha de rede ou 5xx: num processo de horas, não pode derrubar tudo
+            falhas += 1
+            if falhas >= TENTATIVAS_FALHA_REDE:
+                log.warning("Pulando %s após %d falhas (%s)", puuid[:12], falhas, erro)
+                return "falhou"
+            await asyncio.sleep(5 * falhas)
 
     ranked = [{**entrada, "queueType": FILA_SOLO, "tier": tier}]
     async with SessionLocal() as session:
@@ -86,8 +101,9 @@ async def semear_jogador(riot: RiotClient, tier: str, entrada: dict) -> str:
             return "conflito"
 
 
-async def main(limite: int | None) -> None:
-    riot = RiotClient(get_settings().riot_api_key.get_secret_value(), limites=LIMITES)
+async def main(limite: int | None, por_2min: int) -> None:
+    limites = [(18, 1.0), (por_2min, 120.0)]
+    riot = RiotClient(get_settings().riot_api_key.get_secret_value(), limites=limites)
     try:
         ranking = await carregar_ranking(riot)
         salvos = await puuids_ja_salvos()
@@ -97,7 +113,7 @@ async def main(limite: int | None) -> None:
         fila: asyncio.Queue = asyncio.Queue()
         for item in pendentes:
             fila.put_nowait(item)
-        contagem = {"ok": 0, "sumiu": 0, "conflito": 0}
+        contagem = {"ok": 0, "sumiu": 0, "conflito": 0, "falhou": 0}
         inicio = time.monotonic()
 
         async def trabalhador():
@@ -123,4 +139,8 @@ async def main(limite: int | None) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--limite", type=int, default=None, help="máximo de jogadores a buscar")
-    asyncio.run(main(parser.parse_args().limite))
+    parser.add_argument(
+        "--por-2min", type=int, default=POR_2MIN_PADRAO, help="requisições por host a cada 2 min"
+    )
+    args = parser.parse_args()
+    asyncio.run(main(args.limite, args.por_2min))
