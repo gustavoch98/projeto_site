@@ -51,13 +51,24 @@ function Destaque({ insights, comparacao }: { insights: InsightsHorario; compara
   }
   const { melhor, pior, diferencaPontos, consistente } = comparacao;
 
+  // A frase principal só AFIRMA uma diferença quando ela passa no teste corrigido para
+  // comparações múltiplas (ver lib/insights.ts). Sem isso, mostra o "melhor até aqui".
   return (
     <section className="rounded-xl border border-borda bg-painel p-5">
       <p className="inline-block -rotate-2 bg-destaque px-2 py-0.5 font-mono text-xs font-bold uppercase text-fundo">Seu melhor horário</p>
       <p className="mt-1 text-xl font-bold sm:text-2xl">
-        Você rende mais <span className="text-destaque">{expressaoPeriodo(melhor)}</span>
+        {consistente ? (
+          <>
+            Você rende mais <span className="text-destaque">{expressaoPeriodo(melhor)}</span>
+          </>
+        ) : (
+          "Sem diferença clara entre os horários"
+        )}
       </p>
       <p className="mt-2 text-sm text-texto-fraco">
+        {consistente ? "" : "Até aqui, o melhor é "}
+        {!consistente && <span className="text-texto">{expressaoPeriodo(melhor)}</span>}
+        {!consistente && ": "}
         <span className="text-texto">{porcentagem(melhor.winrate!)}</span> de vitórias em {melhor.jogos} partidas, contra{" "}
         <span className="text-texto">{porcentagem(pior.winrate!)}</span> {expressaoPeriodo(pior)} ({pior.jogos} partidas):{" "}
         <span className="text-texto">{diferencaPontos} pontos</span> de diferença. Sua média geral é{" "}
@@ -66,7 +77,7 @@ function Destaque({ insights, comparacao }: { insights: InsightsHorario; compara
       <p className={`mt-3 inline-block px-3 py-1 text-xs ${consistente ? "bg-destaque font-semibold text-fundo" : "border border-borda text-texto-fraco"}`}>
         {consistente
           ? "Com essa quantidade de partidas, dificilmente a diferença é só acaso."
-          : "Ainda pode ser acaso: com mais partidas o resultado fica mais confiável."}
+          : "Diferenças desse tamanho aparecem por acaso com frequência. Com mais partidas o resultado fica mais confiável."}
       </p>
     </section>
   );

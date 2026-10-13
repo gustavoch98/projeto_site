@@ -23,7 +23,7 @@ from app.riot.client import (
     RiotNaoEncontrado,
 )
 from app.riot.routing import RegiaoInvalida
-from app.routes import players
+from app.routes import champions, players
 from app.services.players import RiotIdInvalido
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -50,6 +50,7 @@ app.add_middleware(
 )
 
 app.include_router(players.router)
+app.include_router(champions.router)
 
 
 @app.get("/health", tags=["health"])

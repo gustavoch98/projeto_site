@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, Space_Mono } from "next/font/google";
 import Link from "next/link";
 
 import Logo from "@/components/Logo";
+import NavPrincipal from "@/components/NavPrincipal";
 import { MARCA } from "@/lib/marca";
 import "./globals.css";
 
@@ -22,10 +23,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="pt-BR" className={`${bricolage.variable} ${spaceMono.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         <header className="border-b-2 border-destaque">
-          <div className="mx-auto flex h-14 max-w-4xl items-center px-4">
+          <div className="mx-auto flex h-14 max-w-4xl items-center gap-4 px-4 sm:gap-6">
             <Link href="/" aria-label={`${MARCA.nome}: página inicial`}>
               <Logo />
             </Link>
+            <NavPrincipal />
           </div>
         </header>
 

@@ -27,8 +27,18 @@ function diferencaConsistente(a: FaixaDesempenho, b: FaixaDesempenho): boolean {
   const erro = Math.sqrt(p * (1 - p) * (1 / a.jogos + 1 / b.jogos));
   if (erro === 0) return false;
   const z = (a.vitorias / a.jogos - b.vitorias / b.jogos) / erro;
-  return Math.abs(z) > 1.96;
+  return Math.abs(z) > Z_CORRIGIDO;
 }
+
+/**
+ * Limite do teste corrigido para comparações múltiplas (Bonferroni).
+ *
+ * Escolhemos a melhor e a pior faixa entre 4 (6 pares possíveis) ANTES de testar, e isso
+ * infla os falsos positivos. O notebook 01 mediu: com z > 1,96 o selo aparecia em 11,6% dos
+ * jogadores mesmo com as vitórias embaralhadas (sem efeito real). Com 5% / 6 pares, o limite
+ * vira z > 2,64 e o falso positivo cai para ~2%.
+ */
+const Z_CORRIGIDO = 2.64;
 
 /**
  * Melhor e pior faixa entre as que têm partidas suficientes.

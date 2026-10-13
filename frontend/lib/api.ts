@@ -250,3 +250,37 @@ export async function buscarEvolucao(
     return null;
   }
 }
+
+// --- Tier list ---------------------------------------------------------------
+
+// Espelha backend/app/schemas/tierlist.py
+export type CampeaoTierList = {
+  champion_id: number;
+  champion_name: string;
+  rota: string;
+  tier: string | null;
+  jogos: number;
+  vitorias: number;
+  winrate: number;
+  winrate_ajustado: number | null;
+  pickrate: number;
+  banrate: number;
+};
+
+export type TierList = {
+  patch: string | null;
+  partidas: number;
+  minimo_jogos: number;
+  prior_jogos: number | null; // null = dados ainda não distinguem os campeões (sem tiers)
+  campeoes: CampeaoTierList[];
+};
+
+export async function buscarTierList(rota?: string): Promise<TierList | null> {
+  const params = rota ? `?${new URLSearchParams({ rota })}` : "";
+  try {
+    const resposta = await fetch(`${API_URL}/api/champions/tierlist${params}`);
+    return resposta.ok ? await resposta.json() : null;
+  } catch {
+    return null;
+  }
+}
