@@ -6,7 +6,7 @@ from urllib.parse import quote
 
 import httpx
 
-from app.riot.rate_limiter import RateLimiterPorHost
+from app.riot.rate_limiter import LIMITES_CHAVE_DESENVOLVIMENTO, RateLimiterPorHost
 from app.riot.routing import Roteamento, host
 
 logger = logging.getLogger(__name__)
@@ -42,10 +42,15 @@ class RiotIndisponivel(RiotError):
 
 
 class RiotClient:
-    def __init__(self, api_key: str, http: httpx.AsyncClient | None = None):
+    def __init__(
+        self,
+        api_key: str,
+        http: httpx.AsyncClient | None = None,
+        limites=LIMITES_CHAVE_DESENVOLVIMENTO,
+    ):
         self.http = http or httpx.AsyncClient(timeout=10)
         self.api_key = api_key
-        self.rate_limiter = RateLimiterPorHost()
+        self.rate_limiter = RateLimiterPorHost(limites)
 
     async def close(self) -> None:
         await self.http.aclose()
@@ -93,6 +98,10 @@ class RiotClient:
         )
         return await self._get(rot.regional, caminho)
 
+    async def conta_por_puuid(self, rot: Roteamento, puuid: str) -> dict:
+        """Account-V1 (host regional) -> {puuid, gameName, tagLine}"""
+        return await self._get(rot.regional, f"/riot/account/v1/accounts/by-puuid/{puuid}")
+
     async def summoner_por_puuid(self, rot: Roteamento, puuid: str) -> dict:
         """Summoner-V4 (host de plataforma) -> {puuid, profileIconId, revisionDate, summonerLevel}"""
         return await self._get(rot.plataforma, f"/lol/summoner/v4/summoners/by-puuid/{puuid}")
@@ -100,3 +109,10 @@ class RiotClient:
     async def ranked_por_puuid(self, rot: Roteamento, puuid: str) -> list[dict]:
         """League-V4 (host de plataforma) -> lista com uma entrada por fila ranqueada"""
         return await self._get(rot.plataforma, f"/lol/league/v4/entries/by-puuid/{puuid}")
+
+    async def liga_apex(self, rot: Roteamento, liga: str, fila: str = "RANKED_SOLO_5x5") -> dict:
+        """League-V4 (plataforma): liga inteira de Desafiante, Grão-Mestre ou Mestre.
+
+        liga: "challenger", "grandmaster" ou "master".
+        """
+        return await self._get(rot.plataforma, f"/lol/league/v4/{liga}leagues/by-queue/{fila}")
