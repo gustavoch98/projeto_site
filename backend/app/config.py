@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     database_url: str
     cache_ttl_minutes: int = 10
     refresh_cooldown_seconds: int = 120
+    # Partidas buscadas em segundo plano para o painel de insights (0 desliga)
+    historico_partidas: int = 100
     cors_origins: str = "http://localhost:3000"
 
     @property

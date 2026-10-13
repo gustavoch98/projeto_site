@@ -169,3 +169,18 @@ async def test_historico_de_ranked_so_grava_quando_muda(api, riot_mock):
     riot_mock.get(URL_LEAGUE).respond(200, json=[{**SOLO, "leaguePoints": 66, "wins": 31}])
     await api.get(PERFIL)
     assert await contar_fotos() == 2
+
+
+async def test_partida_sem_participantes_nao_quebra(api, riot_mock):
+    simular_riot(riot_mock)
+    vazia = partida_falsa("BR1_9")
+    vazia["info"]["participants"] = []
+    simular_partidas(riot_mock, [partida_falsa("BR1_1", horas_atras=1), vazia])
+
+    resposta = await api.get(PARTIDAS)
+
+    assert resposta.status_code == 200
+    assert [p["match_id"] for p in resposta.json()] == ["BR1_1"]
+    async with SessionLocal() as session:
+        assert await session.scalar(select(func.count()).select_from(Match)) == 2
+

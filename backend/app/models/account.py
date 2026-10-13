@@ -18,6 +18,8 @@ class Account(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     # Última vez que buscamos as partidas na Riot (None = nunca)
     matches_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Quando o histórico longo (para o painel de insights) foi completado (None = ainda não)
+    history_backfilled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     ranked_entries: Mapped[list["RankedEntry"]] = relationship(
         back_populates="account", cascade="all, delete-orphan", lazy="selectin"

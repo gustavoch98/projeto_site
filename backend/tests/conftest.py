@@ -9,6 +9,8 @@ import os
 
 os.environ["DATABASE_URL"] = "postgresql+asyncpg://lolstats:lolstats@localhost:5432/lolstats_test"
 os.environ["RIOT_API_KEY"] = "RGAPI-chave-de-teste"
+# O histórico em segundo plano é testado chamando a função diretamente (test_insights.py)
+os.environ["HISTORICO_PARTIDAS"] = "0"
 
 import asyncpg  # noqa: E402
 import httpx  # noqa: E402

@@ -128,3 +128,39 @@ export async function buscarPartidas(
     return null; // null = não foi possível carregar (a página mostra um aviso)
   }
 }
+
+// --- Painel de insights ------------------------------------------------------
+
+// Espelha os schemas de backend/app/schemas/insights.py
+export type FaixaDesempenho = {
+  chave: string;
+  rotulo: string;
+  jogos: number;
+  vitorias: number;
+  winrate: number | null;
+  ic_baixo: number | null;
+  ic_alto: number | null;
+};
+
+export type InsightsHorario = {
+  partidas_analisadas: number;
+  winrate_geral: number | null;
+  primeira_partida: string | null;
+  ultima_partida: string | null;
+  por_periodo: FaixaDesempenho[];
+  por_dia_semana: FaixaDesempenho[];
+  coletando_historico: boolean;
+};
+
+export async function buscarInsights(
+  regiao: string,
+  nome: string,
+  tag: string,
+): Promise<InsightsHorario | null> {
+  try {
+    const resposta = await fetch(`${urlPerfil(regiao, nome, tag)}/insights`);
+    return resposta.ok ? await resposta.json() : null;
+  } catch {
+    return null;
+  }
+}
